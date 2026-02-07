@@ -81,12 +81,9 @@ Repository for the project on opd
 и копируем вообще всю строку, далее вставляем её в github:
 
   
+<img src="assets/image_1.png" alt="Описание" style="width: 200px;"/>
 
-![](assets/image_1.png)
-
-  
-
-![](assets/image_2.png)
+<img src="assets/image_2.png" alt="Описание" style="width: 200px;"/>
 
   
 
