@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # opd
 
 Repository for the project on opd
@@ -118,3 +119,6 @@ Repository for the project on opd
 Постарайтесь грамотно писать сообщения в коммите, например что-то в духе: `git commit -m "Add new YOLO model"` - и делать коммиты маленькими.
 
 То есть самый плохой коммит выглядит так: 99999 строк изменены и `git commit -m "something has changed a little"` - тут потом не разобраться где, что поменялось.
+=======
+test
+>>>>>>> c911f487845986a9aa0006730af70e4a7df6a883
