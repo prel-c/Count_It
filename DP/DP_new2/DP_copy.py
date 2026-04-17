@@ -229,9 +229,6 @@ for i in range (0, len(template)*2//3, 2):
             count_after_cheking += 1
             rectangles_new.append(rectangle)
 
-    rectangles_new = merge_duplicate_rectangles(rectangles_new, threshold=0.3)
-    count_after_cheking = len(rectangles_new)
-    
     image_rec_check = drawing_rec(image_RGB, rectangles_new)
     print("Найдено объектов после проверки:", count_after_cheking)
     cv2.imwrite('Check.jpg', image_rec_check)
