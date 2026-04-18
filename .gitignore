@@ -1,0 +1,9 @@
+data_cache\
+loca\images\
+loca\models\loca_few_shot.pt
+loca\models\loca_zero_shot.pt
+ResNet\data\
+ResNet\images\
+ResNet\logsSave\
+Template\image\
+.vscode
