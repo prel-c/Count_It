@@ -88,7 +88,7 @@ def chi_square(hist1, hist2, epsilon=1e-10):
 
     """
     chi_square=np.sum((hist1 - hist2) ** 2 / (hist1 + hist2 + epsilon))
-    if chi_square < 0.4:
+    if chi_square < 0.5:
         return True
     else:
         return False
@@ -117,7 +117,7 @@ def template_search(image, template):
     w, h = template.shape[::-1]
 
     result = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
-    threshold = 0.17
+    threshold = 0.5
     locations = np.where(result >= threshold)
     count = 0
     rectangles = []
@@ -125,7 +125,7 @@ def template_search(image, template):
     for pt in zip(*locations[::-1]):
         rectangles.append([pt[0], pt[1], w, h])
 
-    rectangles = merge_duplicate_rectangles(rectangles, threshold=0.4)
+    rectangles = merge_duplicate_rectangles(rectangles, threshold=0.1)
     count=len(rectangles)
     return rectangles, count
 
@@ -215,14 +215,13 @@ ____________________________________________________
 ____________________________________________________
 
 """
-
 def sobel(image):
 
     """
     Функция применения ядра собеля к ч/б изображению
 
     Ввод - Матрица, соответсвующая ч/б изображению
-    Вывод - Матрицы, содержащая в себе магнитуду каждого пикселя и направление градиента
+    Вывод - Матрица, содержащая в себе магнитуду каждого пикселя
 
     """ 
 
@@ -234,73 +233,19 @@ def sobel(image):
                    [0, 0, 0],
                    [1, 2, 1]])
     
-    # Получаем размеры изображения
     h, w = image.shape
     
-    # Создаем массивы для результатов
-    X = np.zeros_like(image, dtype=np.float64)
-    Y = np.zeros_like(image, dtype=np.float64)
     M = np.zeros_like(image, dtype=np.float64)
-    Theta=np.zeros_like(image, dtype=np.float64)
         
-    # Применяем свертку (обходим пиксели, кроме границ)
     for i in range(1, h - 1):
         for j in range(1, w - 1):
-            # Вырезаем область 3x3 вокруг текущего пикселя
             region = image[i-1:i+2, j-1:j+2]
-            
-            # Вычисляем градиент по X и Y
             gx = np.sum(region * Gx)
             gy = np.sum(region * Gy)
-            
-            X[i, j] = gx
-            Y[i, j] = gy
-            
-            # Вычисляем величину градиента и направление
             M[i, j] = np.sqrt(gx**2 + gy**2)
-            Theta[i, j]=np.atan2(gy, gx)
-    
-    return M, Theta
-
-def NMS(M, Theta):
-    Suppressed = np.zeros_like(M, dtype=np.float64)
-    h, w = M.shape
-    
-    for i in range(1, h - 1):
-        for j in range(1, w - 1):
-            angle = Theta[i, j]
-            angle = np.degrees(angle) % 180
-
-            if (0 <= angle < 22.5) or (157.5 <= angle <= 180):
-                n1 = M[i, j-1]
-                n2 = M[i, j+1]
-            elif (22.5 <= angle < 67.5):
-                n1 = M[i-1, j+1]
-                n2 = M[i+1, j-1]
-            elif (67.5 <= angle < 112.5):
-                n1 = M[i-1, j]
-                n2 = M[i+1, j]
-            else:
-                n1 = M[i-1, j-1]
-                n2 = M[i+1, j+1]
-            
-            if M[i, j] >= n1 and M[i, j] >= n2:
-                Suppressed[i, j] = M[i, j]
-    
-    return Suppressed
-
-def Double_threshold_filtering(Suppressed, bottom_treshold, top_treshold):
-    Filtered=np.zeros_like(Suppressed, dtype=np.uint8)
-    for i in range(1, len(Suppressed)-1):
-        for j in range(1, len(Suppressed[0])-1):
-            if Suppressed[i, j]>top_treshold:
-                Filtered[i, j]=255
-            elif Suppressed[i, j]>bottom_treshold:
-                Filtered[i, j]=100
-    return Filtered
-
-def normalizanion(M):
-    return M/np.sum(M)*len(M)*len(M[0])
+    M = (M / M.max()) * 255
+    M = M.astype(np.uint8)
+    return M
 
 
 """
@@ -320,34 +265,25 @@ image=cv2.cvtColor(image_RGB, cv2.COLOR_BGR2GRAY)
 template=cv2.cvtColor(template_RGB, cv2.COLOR_BGR2GRAY)
 
 # Предобработка изображения и шаблона соответсвенно (Гауссово размытие и ядро собеля)
-image = cv2.GaussianBlur(image, (5, 5), 1)
-M_im, Theta_im = sobel(image)
-M_im=normalizanion(M_im)
-Suppressed_im=NMS(M_im, Theta_im)
-Filtered_im=Double_threshold_filtering(Suppressed_im, 1.5, 2)
-cv2.imwrite('Filtered_im.jpg', Filtered_im)
-
+image = cv2.GaussianBlur(image, (5, 5), 41)
+Magnitude_im = sobel(image)
 
 template = cv2.GaussianBlur(template, (5, 5), 41)
-M_te, Theta_te= sobel(template)
-M_te=normalizanion(M_te)
-Suppressed_te=NMS(M_te, Theta_te)
-Filtered_te=Double_threshold_filtering(Suppressed_te, 1.5, 2)
-cv2.imwrite('Filtered_te.jpg', Filtered_te)
+Magnitude_te = sobel(template)
 
 # Цикл изменения масштаба изображения.
 template_copy=np.copy(template)
 all_rectangles = []
 
-for i in range (0, len(template)*2//3, 2):
+for i in range (0, len(template)*2//3, 1):
 
     # Именение масштаба изображения
     new_size = (len(template[0])-i, len(template)-i) 
-    Filtered_te = cv2.resize(Filtered_te, new_size, interpolation=cv2.INTER_AREA)
+    Magnitude_te = cv2.resize(Magnitude_te, new_size, interpolation=cv2.INTER_AREA)
     template_copy = cv2.resize(template_copy, new_size, interpolation=cv2.INTER_AREA)
 
     # Шаблонный поиск
-    rectangles, count_template_search=template_search(Filtered_im, Filtered_te)
+    rectangles, count_template_search=template_search(Magnitude_im, Magnitude_te)
     all_rectangles.extend(rectangles)
     image_rec_t = drawing_rec(image_RGB_copy, rectangles)
     cv2.imwrite('t.jpg', image_rec_t)
