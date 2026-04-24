@@ -5,15 +5,13 @@ import matplotlib.pyplot as plt
 from torchvision import transforms
 from models.loca import build_model
 
-# --- НАСТРОЙКИ ---
-IMG_PATH = "image copy 8.png"      # ПУТЬ К ВАШЕМУ ФОТО
+IMG_PATH = "D:/mygit/opd/ResNet/images/473.jpg"
 MODEL_PATH = "models/loca_few_shot.pt"
 ZERO_SHOT = False 
 
 def run_prediction():
     device = torch.device('cpu')
     
-    # 1. Загрузка модели (исправленный класс Args)
     class Args:
         backbone = 'resnet50'
         swav_backbone = True
@@ -37,20 +35,13 @@ def run_prediction():
     model.load_state_dict(state_dict)
     model.eval()
 
-    # 2. Загрузка фото и выбор объектов мышкой
     img_bgr = cv2.imread(IMG_PATH)
     if img_bgr is None:
         print(f"Ошибка: не удалось загрузить фото {IMG_PATH}")
         return
 
-    print("\n--- ИНСТРУКЦИЯ ---")
-    print("1. Выделите мышкой ПЕРВЫЙ объект и нажмите ENTER или SPACE")
-    print("2. Повторите для второго и третьего объекта")
-    print("3. Нажмите ESC, если хотите отменить\n")
-
     my_bboxes = []
     for i in range(3):
-        # Окно выбора ROI (Region of Interest)
         roi = cv2.selectROI(f"Select Object {i+1}", img_bgr, fromCenter=False, showCrosshair=True)
         x, y, w, h = roi
         # Преобразуем формат OpenCV [x, y, w, h] в формат LOCA [x1, y1, x2, y2]
@@ -60,7 +51,6 @@ def run_prediction():
     h_orig, w_orig, _ = img_bgr.shape
     img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
     
-    # 3. Подготовка картинки для нейросети
     transform = transforms.Compose([
         transforms.ToPILImage(),
         transforms.Resize((512, 512)),
@@ -69,35 +59,34 @@ def run_prediction():
     ])
     img_tensor = transform(img_rgb).unsqueeze(0).to(device)
 
-    # 4. Масштабирование координат боксов под 512x512
     bboxes = torch.tensor(my_bboxes).float()
     bboxes[:, [0, 2]] *= (512.0 / w_orig)
     bboxes[:, [1, 3]] *= (512.0 / h_orig)
     bboxes = bboxes.unsqueeze(0).to(device)
 
-    # 5. Предсказание
-    print("Считаем...")
     with torch.no_grad():
         output, _ = model(img_tensor, bboxes)
     
     count = output.sum().item()
     print(f"Итоговое количество: {count:.2f}")
 
-    # 6. Финальный результат
+    h, w = img_rgb.shape[:2]
     density_map = output[0].squeeze().cpu().numpy()
     plt.figure(figsize=(12, 6))
     plt.subplot(1, 2, 1)
     plt.imshow(img_rgb)
-    # Рисуем боксы на итоговой картинке для контроля
     for box in my_bboxes:
         plt.gca().add_patch(plt.Rectangle((box[0], box[1]), box[2]-box[0], box[3]-box[1], 
                                           edgecolor='red', facecolor='none', lw=2))
-    plt.title("Ваши примеры")
-    
+    plt.title("")
+    plt.gca().set_box_aspect(1)
+    plt.axis('off')
     plt.subplot(1, 2, 2)
-    plt.imshow(density_map, cmap='jet')
-    plt.title(f"Результат (Предсказано: {count:.2f})")
+    plt.imshow(density_map, cmap='jet', extent=[0, w, h, 0])
+    plt.title(f"Результат {count:.2f})")
+    plt.gca().set_box_aspect(1)
     plt.colorbar(fraction=0.046, pad=0.04)
+    plt.axis('off')
     plt.show()
 
 if __name__ == "__main__":

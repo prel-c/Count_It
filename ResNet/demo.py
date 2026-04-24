@@ -10,6 +10,7 @@ import argparse
 import torch.optim as optim
 from utils import MincountLoss, PerturbationLoss
 from tqdm import tqdm
+import numpy as np
 
 
 parser = argparse.ArgumentParser(description="Few Shot Counting Demo code")
@@ -142,9 +143,8 @@ else:
 
 print('===> The predicted count is: {:6.2f}'.format(output.sum().item()))
 
+np.save('density_map_result.npy', output)
 
 rslt_file = "{}/{}_out.png".format(args.output_dir, image_name)
 visualize_output_and_save(image.detach().cpu(), output.detach().cpu(), boxes.cpu(), rslt_file)
 print("===> Visualized output is saved to {}".format(rslt_file))
-
-

@@ -20,10 +20,6 @@ IM_NORM_MEAN = [0.485, 0.456, 0.406]
 IM_NORM_STD = [0.229, 0.224, 0.225]
 
 def prepare_sample(image, max_hw=1504):
-    """
-    Упрощенная версия resizeImage
-    image: PIL Image
-    """
     W, H = image.size
     scale_factor = 1.0
     

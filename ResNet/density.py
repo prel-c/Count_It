@@ -111,7 +111,8 @@ print(f"Результат сохранен в файл: {save_path}")"""
 
 
 
-file = np.load("data/gt_density_map_adaptive_384_VarV2/4.npy")
+file = np.load("density_map_result.npy")
+file = np.squeeze(file)
 plt.xlabel(sum(sum(file)))
 plt.imshow(file)
 plt.savefig("output.png")
