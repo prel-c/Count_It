@@ -36,7 +36,7 @@ repository for the computer vision project
 
 Пример работы
 
-<img src="assets/image_1.png" alt="Описание" style="width: 200px;"/>
+<img src="assets/image_FamNet.png" alt="Описание" style="width: 200px;"/>
 
 ### 2. Segmentation -> ResNet -> FamNet
 
