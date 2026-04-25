@@ -13,9 +13,9 @@ from os.path import exists
 import torch.optim as optim
 
 
-parser = argparse.ArgumentParser(description="Few Shot Counting Evaluation code")
-parser.add_argument("-dp", "--data_path", type=str, default='./data/', help="Path to the FSC147 dataset")
-parser.add_argument("-ts", "--test_split", type=str, default='val', choices=["val_PartA","val_PartB","test_PartA","test_PartB","test", "val"], help="what data split to evaluate on")
+parser = argparse.ArgumentParser(description="test on dataset")
+parser.add_argument("-dp", "--data_path", type=str, default='./data/', help="Path to the your dataset")
+parser.add_argument("-ts", "--test_split", type=str, default='val', choices=["val_PartA","val_PartB","test_PartA","test_PartB","test", "val"])
 parser.add_argument("-m",  "--model_path", type=str, default="./data/pretrainedModels/FamNet_Save1.pth", help="path to trained model")
 parser.add_argument("-a",  "--adapt", action='store_true', help="If specified, perform test time adaptation")
 parser.add_argument("-gs", "--gradient_steps", type=int,default=100, help="number of gradient steps for the adaptation")
@@ -30,13 +30,6 @@ print(data_path)
 anno_file = data_path + 'annotation_FSC147_384.json'
 data_split_file = data_path + 'Train_Test_Val_FSC_147.json'
 im_dir = data_path + 'images_384_VarV2'
-
-
-if not exists(anno_file) or not exists(im_dir):
-    print("Make sure you set up the --data-path correctly.")
-    print("Current setting is {}, but the image dir and annotation file do not exist.".format(args.data_path))
-    print("Aborting the evaluation")
-    exit(-1)
 
 if not torch.cuda.is_available() or args.gpu_id < 0:
     use_gpu = False
@@ -61,10 +54,9 @@ with open(anno_file) as f:
 with open(data_split_file) as f:
     data_split = json.load(f)
 
-
 cnt = 0
-SAE = 0  # sum of absolute errors
-SSE = 0  # sum of square errors
+SAE = 0 #линейная сумма ошибки
+SSE = 0 #квадратичная сумма ошибки
 
 print("Evaluation on {} data".format(args.test_split))
 im_ids = data_split[args.test_split]
@@ -105,8 +97,6 @@ for im_id in pbar:
             lCount = args.weight_mincount * MincountLoss(output, boxes)
             lPerturbation = args.weight_perturbation * PerturbationLoss(output, boxes, sigma=8)
             Loss = lCount + lPerturbation
-            # loss can become zero in some cases, where loss is a 0 valued scalar and not a tensor
-            # So Perform gradient descent only for non zero cases
             if torch.is_tensor(Loss):
                 Loss.backward()
                 optimizer.step()

@@ -15,10 +15,10 @@ import torch.nn.functional as F
 import cv2
 
 
-parser = argparse.ArgumentParser(description="Few Shot Counting Evaluation code")
-parser.add_argument("-dp", "--data_path", type=str, default='D:/mygit/opd/ResNet/data/', help="Path to the FSC147 dataset")
+parser = argparse.ArgumentParser(description="training")
+parser.add_argument("-dp", "--data_path", type=str, default='./data/', help="Path to the your dataset")
 parser.add_argument("-o", "--output_dir", type=str,default="./logsSave", help="/Path/to/output/logs/")
-parser.add_argument("-ts", "--test-split", type=str, default='val', choices=["train", "test", "val"], help="what data split to evaluate on on")
+parser.add_argument("-ts", "--test-split", type=str, default='val', choices=["train", "test", "val"])
 parser.add_argument("-ep", "--epochs", type=int,default=1500, help="number of training epochs")
 parser.add_argument("-g", "--gpu", type=int,default=0, help="GPU id")
 parser.add_argument("-lr", "--learning-rate", type=float,default=1e-5, help="learning rate")
@@ -59,7 +59,7 @@ with open(data_split_file) as f:
     data_split = json.load(f)
 
 def train():
-    print("Training on FSC147 train set data")
+    print("Training")
     im_ids = data_split['train']
     random.shuffle(im_ids)
     train_mae = 0
@@ -82,7 +82,7 @@ def train():
             rects.append([y1, x1, y2, x2])
 
         if len(rects) == 0:
-            print(f" Пропуск {im_id}: нет боксов-примеров в аннотации.")
+            print(f" Skip {im_id}: no example boxes.")
             continue
 
         image = Image.open('{}/{}'.format(im_dir, im_id))
@@ -94,7 +94,6 @@ def train():
         sample = {'image':image,'lines_boxes':rects,'gt_density':density}
         sample = TransformTrain(sample)
         image, boxes, gt_density = sample['image'].to(device), sample['boxes'].to(device), sample['gt_density'].to(device)
-        #print("ЧИСЛО РАЗМЕРНОСТЕЙ", boxes.dim(), boxes)
 
         if boxes.dim() == 3:
             boxes = boxes.unsqueeze(1) 
@@ -108,7 +107,6 @@ def train():
         optimizer.zero_grad()
         output = regressor(features)
 
-        #if image size isn't divisible by 8, gt size is slightly different from output size
         if output.shape[2] != gt_density.shape[2] or output.shape[3] != gt_density.shape[3]:
             orig_count = gt_density.sum().detach().item()
             gt_density = F.interpolate(gt_density, size=(output.shape[2],output.shape[3]),mode='bilinear')
@@ -129,14 +127,11 @@ def train():
     train_mae = (train_mae / len(im_ids))
     train_rmse = (train_rmse / len(im_ids))**0.5
     return train_loss,train_mae,train_rmse
-
-
-
    
 def eval():
     cnt = 0
-    SAE = 0 # sum of absolute errors
-    SSE = 0 # sum of square errors
+    SAE = 0 #линейная сумма ошибки
+    SSE = 0 #квадратичная сумма ошибки
 
     print("Evaluation on {} data".format(args.test_split))
     im_ids = data_split[args.test_split]
@@ -155,7 +150,7 @@ def eval():
             rects.append([y1, x1, y2, x2])
 
         if len(rects) == 0:
-            print(f" Пропуск {im_id}: нет боксов-примеров в аннотации.")
+            print(f" Skip {im_id}: no example boxes.")
             continue
 
         image = Image.open('{}/{}'.format(im_dir, im_id))
@@ -171,7 +166,6 @@ def eval():
 
         gt_cnt = dots.shape[0]
         pred_cnt = output.sum().item()
-        #print("ПРЕДИКТ", pred_cnt)
         cnt = cnt + 1
         err = abs(gt_cnt - pred_cnt)
         SAE += err

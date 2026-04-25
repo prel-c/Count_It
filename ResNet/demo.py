@@ -1,4 +1,3 @@
-
 import cv2
 from model import CountRegressor, Resnet50FPN
 from utils import MAPS, Scales, Transform, extract_features
@@ -13,13 +12,12 @@ from tqdm import tqdm
 import numpy as np
 
 
-parser = argparse.ArgumentParser(description="Few Shot Counting Demo code")
+parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input-image", type=str, required=True, help="/Path/to/input/image/file/")
 parser.add_argument("-b", "--bbox-file", type=str, help="/Path/to/file/of/bounding/boxes")
 parser.add_argument("-o", "--output-dir", type=str, default=".", help="/Path/to/output/image/file")
 parser.add_argument("-m",  "--model_path", type=str, default="./data/pretrainedModels/FamNet_Save1.pth", help="path to trained model")
 parser.add_argument("-g",  "--gpu-id", type=int, default=0, help="GPU id. Default 0 for the first GPU. Use -1 for CPU.")
-
 
 parser.add_argument("-a",  "--adapt", action='store_true', help="If specified, perform test time adaptation")
 parser.add_argument("-gs", "--gradient_steps", type=int,default=100, help="number of gradient steps for the adaptation")
@@ -60,7 +58,7 @@ image_name = os.path.basename(args.input_image)
 image_name = os.path.splitext(image_name)[0]
 
 
-if args.bbox_file is None: # if no bounding box file is given, prompt the user for a set of bounding boxes
+if args.bbox_file is None:
     out_bbox_file = "{}/{}_box.txt".format(args.output_dir, image_name)
     fout = open(out_bbox_file, "w")
     im = cv2.imread(args.input_image, cv2.IMREAD_COLOR)  # игнорирует альфа-канал
@@ -101,8 +99,6 @@ sample = {'image': image, 'lines_boxes': rects1}
 sample = Transform(sample)
 image, boxes = sample['image'], sample['boxes']
 
-
-
 if use_gpu:
     image = image.cuda()
     boxes = boxes.cuda()
@@ -128,8 +124,6 @@ else:
         lCount = args.weight_mincount * MincountLoss(output, boxes, use_gpu=use_gpu)
         lPerturbation = args.weight_perturbation * PerturbationLoss(output, boxes, sigma=8, use_gpu=use_gpu)
         Loss = lCount + lPerturbation
-        # loss can become zero in some cases, where loss is a 0 valued scalar and not a tensor
-        # So Perform gradient descent only for non zero cases
         if torch.is_tensor(Loss):
             Loss.backward()
             optimizer.step()
@@ -143,7 +137,7 @@ else:
 
 print('===> The predicted count is: {:6.2f}'.format(output.sum().item()))
 
-np.save('density_map_result.npy', output)
+#np.save('density_map_result.npy', output)
 
 rslt_file = "{}/{}_out.png".format(args.output_dir, image_name)
 visualize_output_and_save(image.detach().cpu(), output.detach().cpu(), boxes.cpu(), rslt_file)
