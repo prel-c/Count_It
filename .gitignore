@@ -12,4 +12,5 @@ ResNet/logsSave/
 ResNet/__pycache__/
 ResNet/.vscode/
 Template/image/
+Segmentation/SAM/data/sam_vit_b_01ec64.pth
 .vscode
