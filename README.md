@@ -35,6 +35,7 @@ repository for the computer vision project
 - желательно наличие GPU
 
 Пример работы
+
 <img src="assets/image_1.png" alt="Описание" style="width: 200px;"/>
 
 ### 2. Segmentation -> ResNet -> FamNet
