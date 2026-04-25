@@ -7,12 +7,10 @@ import cv2
 import matplotlib
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-matplotlib.use('agg')
 from sklearn.decomposition import PCA
-from sobel import sobel, ad_cont
 
 
-MAPS = ['map3','map4']
+MAPS = ['map3','map4'] # можно взять и map1 и map2
 Scales = [0.9, 1.1]
 MIN_HW = 384
 MAX_HW = 1584
@@ -21,6 +19,7 @@ IM_NORM_STD = [0.229, 0.224, 0.225]
 
 
 def select_exemplar_rois(image):
+    """ручной выбор примеров"""
     all_rois = []
 
     print("Press 'q' or Esc to quit. Pres 'n' and then use mouse drag to sdraw a new examplar, 'space' to save.")
@@ -45,8 +44,7 @@ def select_exemplar_rois(image):
 
 def matlab_style_gauss2D(shape=(3,3),sigma=0.5):
     """
-    2D gaussian mask - should give the same result as MATLAB's
-    fspecial('gaussian',[shape],[sigma])
+    для отрисовки пятен на карте плотности
     """
     m,n = [(ss-1.)/2. for ss in shape]
     y,x = np.ogrid[-m:m+1,-n:n+1]
@@ -58,6 +56,9 @@ def matlab_style_gauss2D(shape=(3,3),sigma=0.5):
     return h
 
 def PerturbationLoss(output,boxes,sigma=8, use_gpu=True):
+    """
+    Сравнивает предсказанную плотность в областях примеров с идеальным Гауссовым ядром 
+    """
     Loss = 0.
     if boxes.shape[1] > 1:
         boxes = boxes.squeeze()
@@ -87,6 +88,11 @@ def PerturbationLoss(output,boxes,sigma=8, use_gpu=True):
     return Loss
 
 def MincountLoss(output, boxes, use_gpu=True):
+    """
+    Если сумма внутри примера меньше 1.0, функция вычисляет ошибку (MSE) 
+    между текущей суммой и единицей.
+    Гарантирует, что каждый пример засчитывается как минимум за один объект
+    """
     ones = torch.ones(1)
     if torch.cuda.is_available() and use_gpu:
         ones = ones.cuda()
@@ -113,9 +119,7 @@ def MincountLoss(output, boxes, use_gpu=True):
     return Loss
 
 def pad_to_size(feat, desire_h, desire_w):
-    """ zero-padding a four dim feature matrix: N*C*H*W so that the new Height and Width are the desired ones
-        desire_h and desire_w should be largers than the current height and weight
-    """
+    """Добавляет нулевые отступы (padding) к тензору признаков (N, C, H, W)"""
 
     cur_h = feat.shape[-2]
     cur_w = feat.shape[-1]
@@ -128,18 +132,17 @@ def pad_to_size(feat, desire_h, desire_w):
     return F.pad(feat, (left_pad, right_pad, top_pad, bottom_pad))
 
 def extract_features(feature_model, image, boxes, feat_map_keys=['map3','map4'], exemplar_scales=[0.9, 1.1]):
+    """
+    Извлекает признаки из объектов через ResNet, делает свёртку
+    с каждым признаком в качестве ядра и позвращает многоканальную карту сходства
+    """
     N, M = image.shape[0], boxes.shape[2]
-    """
-    Getting features for the image N * C * H * W
-    """
     Image_features = feature_model(image)
 
-    feat = Image_features['map2'][0] # Форма станет [512, 48, 72]
+    feat = Image_features['map2'][0]
 
-    # Усредняем все каналы, чтобы увидеть "общую активацию"
+    # Усредняем все каналы
     feat_mean = torch.mean(feat, dim=0).cpu().numpy() 
-
-    # 3. Нормализация (чтобы значения были от 0 до 255)
     feat_min = feat_mean.min()
     feat_max = feat_mean.max()
     if feat_max > feat_min:
@@ -147,14 +150,9 @@ def extract_features(feature_model, image, boxes, feat_map_keys=['map3','map4'],
     else:
         feat_norm = feat_mean
 
-    feat_viz = (feat_norm * 255).astype(np.uint8)
+    #feat_viz = (feat_norm * 255).astype(np.uint8)
+    #feat_viz = cv2.resize(feat_viz, (48*8, 72*8), interpolation=cv2.INTER_LINEAR)
 
-    feat_viz = cv2.resize(feat_viz, (48*8, 72*8), interpolation=cv2.INTER_LINEAR)
-
-
-    """
-    Getting features for the examples (N*M) * C * h * w
-    """
     for ix in range(0,N):
         #boxes = boxes.squeeze(0)
         curr_boxes = boxes[ix][0]
@@ -172,9 +170,9 @@ def extract_features(feature_model, image, boxes, feat_map_keys=['map3','map4'],
             boxes_scaled = curr_boxes / Scaling
             boxes_scaled[:, 1:3] = torch.floor(boxes_scaled[:, 1:3])
             boxes_scaled[:, 3:5] = torch.ceil(boxes_scaled[:, 3:5])
-            boxes_scaled[:, 3:5] = boxes_scaled[:, 3:5] + 1 # make the end indices exclusive 
+            boxes_scaled[:, 3:5] = boxes_scaled[:, 3:5] + 1
             feat_h, feat_w = image_features.shape[-2], image_features.shape[-1]
-            # make sure exemplars don't go out of bound
+
             boxes_scaled[:, 1:3] = torch.clamp_min(boxes_scaled[:, 1:3], 0)
             boxes_scaled[:, 3] = torch.clamp_max(boxes_scaled[:, 3], feat_h)
             boxes_scaled[:, 4] = torch.clamp_max(boxes_scaled[:, 4], feat_w)            
@@ -189,28 +187,26 @@ def extract_features(feature_model, image, boxes, feat_map_keys=['map3','map4'],
                 if j == 0:
                     examples_features = image_features[:,:,y1:y2, x1:x2]
                     if examples_features.shape[2] != max_h or examples_features.shape[3] != max_w:
-                        #examples_features = pad_to_size(examples_features, max_h, max_w)
+
                         examples_features = F.interpolate(examples_features, size=(max_h,max_w),mode='bilinear')                    
                 else:
                     feat = image_features[:,:,y1:y2, x1:x2]
                     if feat.shape[2] != max_h or feat.shape[3] != max_w:
                         feat = F.interpolate(feat, size=(max_h,max_w),mode='bilinear')
-                        #feat = pad_to_size(feat, max_h, max_w)
+
                     examples_features = torch.cat((examples_features,feat),dim=0)
-            """
-            Convolving example features over image features
-            """
+
             h, w = examples_features.shape[2], examples_features.shape[3]
             features =    F.conv2d(
                     F.pad(image_features, ((int(w/2)), int((w-1)/2), int(h/2), int((h-1)/2))),
                     examples_features
                 )
             combined = features.permute([1,0,2,3])
-            # computing features for scales 0.9 and 1.1 
+
             for scale in exemplar_scales:
                     h1 = math.ceil(h * scale)
                     w1 = math.ceil(w * scale)
-                    if h1 < 1: # use original size if scaled size is too small
+                    if h1 < 1:
                         h1 = h
                     if w1 < 1:
                         w1 = w
@@ -234,14 +230,7 @@ def extract_features(feature_model, image, boxes, feat_map_keys=['map3','map4'],
 
 
 class resizeImage(object):
-    """
-    If either the width or height of an image exceed a specified value, resize the image so that:
-        1. The maximum of the new height and new width does not exceed a specified value
-        2. The new height and new width are divisible by 8
-        3. The aspect ratio is preserved
-    No resizing is done if both height and width are smaller than the specified value
-    By: Minh Hoai Nguyen (minhhoai@gmail.com)
-    """
+    """Изменяет размер изображения и координат боксов-примеров для тестирования"""
     
     def __init__(self, MAX_HW=1504):
         self.max_hw = MAX_HW
@@ -272,15 +261,7 @@ class resizeImage(object):
 
 
 class resizeImageWithGT(object):
-    """
-    If either the width or height of an image exceed a specified value, resize the image so that:
-        1. The maximum of the new height and new width does not exceed a specified value
-        2. The new height and new width are divisible by 8
-        3. The aspect ratio is preserved
-    No resizing is done if both height and width are smaller than the specified value
-    By: Minh Hoai Nguyen (minhhoai@gmail.com)
-    Modified by: Viresh
-    """
+    """В отличие от обычного resizeImage, дополнительно обрабатывает карту плотности"""
     
     def __init__(self, MAX_HW=1504):
         self.max_hw = MAX_HW
@@ -324,26 +305,8 @@ TransformTrain = transforms.Compose([resizeImageWithGT(MAX_HW)])
 
 
 def denormalize(tensor, means=IM_NORM_MEAN, stds=IM_NORM_STD):
-    """Reverses the normalisation on a tensor.
-    Performs a reverse operation on a tensor, so the pixel value range is
-    between 0 and 1. Useful for when plotting a tensor into an image.
-    Normalisation: (image - mean) / std
-    Denormalisation: image * std + mean
-    Args:
-        tensor (torch.Tensor, dtype=torch.float32): Normalized image tensor
-    Shape:
-        Input: :math:`(N, C, H, W)`
-        Output: :math:`(N, C, H, W)` (same shape as input)
-    Return:
-        torch.Tensor (torch.float32): Demornalised image tensor with pixel
-            values between [0, 1]
-    Note:
-        Symbols used to describe dimensions:
-            - N: number of images in a batch
-            - C: number of channels
-            - H: height of the image
-            - W: width of the image
-    """
+    """Выполняет обратную нормализацию тензора изображения.
+    Нужна для визуализации тензоров в виде обычных картинок"""
 
     denormalized = tensor.clone()
 
@@ -354,8 +317,6 @@ def denormalize(tensor, means=IM_NORM_MEAN, stds=IM_NORM_STD):
 
 
 def scale_and_clip(val, scale_factor, min_val, max_val):
-    "Helper function to scale a value and clip it within range"
-
     new_val = int(round(val*scale_factor))
     new_val = max(new_val, min_val)
     new_val = min(new_val, max_val)
@@ -363,12 +324,13 @@ def scale_and_clip(val, scale_factor, min_val, max_val):
 
 
 def visualize_output_and_save(input_, output, boxes, save_path, figsize=(20, 12), dots=None):
-    """
-        dots: Nx2 numpy array for the ground truth locations of the dot annotation
-            if dots is None, this information is not available
-    """
+    """Создает сетку 2x2.
+    Сетка включает:
+    1. Оригинальное изображение с рамками-примерами
+    2. Наложение тепловой карты плотности на оригинал
+    3. Карту плотности
+    4. Карту плотности с примерами"""
 
-    # get the total count
     pred_cnt = output.sum().item()
     boxes = boxes.squeeze(0)
 
@@ -384,7 +346,6 @@ def visualize_output_and_save(input_, output, boxes, save_path, figsize=(20, 12)
 
     fig = plt.figure(figsize=figsize)
 
-    # display the input image
     ax = fig.add_subplot(2, 2, 1)
     ax.set_axis_off()
     ax.imshow(img1)
@@ -412,7 +373,6 @@ def visualize_output_and_save(input_, output, boxes, save_path, figsize=(20, 12)
     ax.imshow(output, cmap=plt.cm.viridis, alpha=0.5)
 
 
-    # display the density map
     ax = fig.add_subplot(2, 2, 3)
     ax.set_axis_off()
     ax.set_title("Density map, predicted count: {:.2f}".format(pred_cnt))
@@ -439,25 +399,7 @@ def visualize_output_and_save(input_, output, boxes, save_path, figsize=(20, 12)
 
 
 def format_for_plotting(tensor):
-    """Formats the shape of tensor for plotting.
-    Tensors typically have a shape of :math:`(N, C, H, W)` or :math:`(C, H, W)`
-    which is not suitable for plotting as images. This function formats an
-    input tensor :math:`(H, W, C)` for RGB and :math:`(H, W)` for mono-channel
-    data.
-    Args:
-        tensor (torch.Tensor, torch.float32): Image tensor
-    Shape:
-        Input: :math:`(N, C, H, W)` or :math:`(C, H, W)`
-        Output: :math:`(H, W, C)` or :math:`(H, W)`, respectively
-    Return:
-        torch.Tensor (torch.float32): Formatted image tensor (detached)
-    Note:
-        Symbols used to describe dimensions:
-            - N: number of images in a batch
-            - C: number of channels
-            - H: height of the image
-            - W: width of the image
-    """
+    """Преобразует тензор PyTorch в формат для отрисовки через Matplotlib"""
 
     has_batch_dimension = len(tensor.shape) == 4
     formatted = tensor.clone()
@@ -472,40 +414,27 @@ def format_for_plotting(tensor):
 
 
 def extract_segmentation_map(feature_model, image, boxes, target_map='map1'):
-    """
-    Извлекает карту корреляции (похожести) для сегментации с нужного слоя (например, map1 или map2).
-    
-    Возвращает:
-    Тензор формы [Batch_size, M, H, W], где M - количество примеров (boxes).
+    """Извлекает карту корреляции для сегментации с нужного слоя
+    Возвращает тензор [Batch_size, M, H, W], где M - количество примеров (boxes).
     """
     N, M = image.shape[0], boxes.shape[2]
-    
-    # 1. Получаем все карты признаков от модели
-    Image_features = feature_model(image)
-    
-    print("Доступные слои в модели:", Image_features.keys())
 
-    # Определяем фактор сжатия для пересчета координат рамок
-    # В оригинальном коде map1 и map2 имели масштаб 4.0
+    Image_features = feature_model(image)
     scale_dict = {'map1': 4.0, 'map2': 4.0, 'map3': 8.0, 'map4': 16.0} 
     Scaling = scale_dict.get(target_map, 4.0)
     
     batch_correlation_maps = []
-    
-    # 2. Обрабатываем каждое изображение в батче
     for ix in range(N):
         curr_boxes = boxes[ix][0]
-        # Достаем только нужный нам слой (например, map1)
         image_features = Image_features[target_map][ix].unsqueeze(0)
-        
-        # 3. Масштабируем координаты рамок под размер Feature Map
+
         boxes_scaled = curr_boxes / Scaling
         boxes_scaled[:, 1:3] = torch.floor(boxes_scaled[:, 1:3])
         boxes_scaled[:, 3:5] = torch.ceil(boxes_scaled[:, 3:5]) + 1 
         
         feat_h, feat_w = image_features.shape[-2], image_features.shape[-1]
         
-        # Защита от выхода за границы картинки
+        # чтоб за границы не выйти
         boxes_scaled[:, 1:3] = torch.clamp_min(boxes_scaled[:, 1:3], 0)
         boxes_scaled[:, 3] = torch.clamp_max(boxes_scaled[:, 3], feat_h)
         boxes_scaled[:, 4] = torch.clamp_max(boxes_scaled[:, 4], feat_w)            
@@ -513,164 +442,92 @@ def extract_segmentation_map(feature_model, image, boxes, target_map='map1'):
         box_hs = boxes_scaled[:, 3] - boxes_scaled[:, 1]
         box_ws = boxes_scaled[:, 4] - boxes_scaled[:, 2]            
         max_h, max_w = math.ceil(max(box_hs)), math.ceil(max(box_ws))            
-        
-        # 4. Вырезаем признаки для каждого примера
+    
         examples_features = []
         for j in range(M):
             y1, x1 = int(boxes_scaled[j, 1]), int(boxes_scaled[j, 2])  
             y2, x2 = int(boxes_scaled[j, 3]), int(boxes_scaled[j, 4]) 
             
             feat = image_features[:, :, y1:y2, x1:x2]
-            
-            # Приводим все примеры к единому размеру (самого большого примера)
             if feat.shape[2] != max_h or feat.shape[3] != max_w:
                 feat = F.interpolate(feat, size=(max_h, max_w), mode='bilinear', align_corners=False)
             
             examples_features.append(feat)
-            
-        # Объединяем примеры в один тензор
         examples_features = torch.cat(examples_features, dim=0)
         
-        # 5. Свертка (поиск объектов на картинке)
+        # Свертка
         h, w = examples_features.shape[2], examples_features.shape[3]
         padding = (int(w/2), int((w-1)/2), int(h/2), int((h-1)/2))
-        
-        # Получаем карту корреляции
         correlation_map = F.conv2d(
             F.pad(image_features, padding),
             examples_features
         )
         
         batch_correlation_maps.append(correlation_map)
-        
-    # Возвращаем склеенный результат для всего батча
     return torch.cat(batch_correlation_maps, dim=0)
 
-
-def show_segmentation_result(image_tensor, correlation_map, window_name="Segmentation Map"):
-    """
-    Преобразует тензор корреляции в визуальную маску.
-    image_tensor: исходное изображение [1, 3, H, W]
-    correlation_map: результат функции extract_segmentation_map [1, M, h, w]
-    """
-    # 1. Усредняем по всем примерам (dim=1) и убираем лишние размерности
-    # Результат: матрица [h, w]
-    mask = torch.mean(correlation_map, dim=1).squeeze().cpu().detach().numpy()
-    
-    # 2. Нормализация (чтобы значения были от 0 до 1)
-    mask_min = mask.min()
-    mask_max = mask.max()
-    if mask_max > mask_min:
-        mask = (mask - mask_min) / (mask_max - mask_min)
-    
-    # 3. Приводим к размеру исходного изображения (если нужно)
-    # image_tensor имеет форму [1, 3, H, W]
-    orig_h, orig_w = image_tensor.shape[-2], image_tensor.shape[-1]
-    mask_resized = cv2.resize(mask, (orig_w, orig_h), interpolation=cv2.INTER_LINEAR)
-    
-    # 4. Превращаем в формат 0-255 для OpenCV
-    mask_visual = (mask_resized * 255).astype(np.uint8)
-    
-    # 5. Опционально: применяем цветовую карту (Heatmap), чтобы было нагляднее
-    heatmap = cv2.applyColorMap(mask_visual, cv2.COLORMAP_JET)
-    
-    cv2.imshow(window_name, heatmap)
-    cv2.waitKey(0) # Ждем нажатия клавиши
-    
-    return mask_visual
-
-
 def show_pca_features(feature_map):
-    """
-    Визуализирует многоканальную карту признаков через метод главных компонент (PCA).
-    """
-    # 1. Подготовка данных: убираем батч и приводим к виду [C, H*W] -> [H*W, C]
+    """Визуализирует многоканальную карту признаков через PCA"""
+
     feat = feature_map[0].detach().cpu().numpy()
     c, h, w = feat.shape
     feat_flat = feat.reshape(c, -1).T 
     
-    # 2. PCA: сжимаем все каналы (например, 256) в 3 главных компонента (RGB)
     pca = PCA(n_components=3)
     pca_result = pca.fit_transform(feat_flat) 
-    
-    # 3. Нормализация в диапазон [0, 1] для корректного отображения цветов
     pca_min = pca_result.min(axis=0)
     pca_max = pca_result.max(axis=0)
     pca_result = (pca_result - pca_min) / (pca_max - pca_min + 1e-8)
-    
-    # Решейпим обратно в картинку [H, W, 3] и переводим в 0-255
+
     pca_img = (pca_result.reshape(h, w, 3) * 255).astype(np.uint8)
-    
-    # 4. Увеличение для наглядности (так как map2 в 4 раза меньше оригинала)
+
     pca_img_resized = cv2.resize(pca_img, (w * 4, h * 4), interpolation=cv2.INTER_NEAREST)
-    
-    # Конвертируем RGB в BGR для корректной работы OpenCV
+
     pca_img_resized = cv2.cvtColor(pca_img_resized, cv2.COLOR_RGB2BGR)
     
     return pca_img_resized
 
 def show_top_channels(feature_map, num_channels=6, upscale_factor=4):
-    # feature_map: [1, 256, H, W]
+    """Визуализирует многоканальную карту признаков через n самых активных каналов"""
     feat = feature_map[0].cpu().detach().numpy()
-    
-    # Считаем среднюю активацию каждого канала, чтобы найти самые "яркие"
+
     channel_energy = feat.mean(axis=(1, 2))
     top_indices = np.argsort(channel_energy)[-num_channels:][::-1]
 
     combined_img = []
-    #obel_list = []
     for idx in top_indices:
         ch = feat[idx]
-        # Нормализация для отображения
         ch = ((ch - ch.min()) / (ch.max() - ch.min() + 1e-5) * 255).astype(np.uint8)
         #ch_sobel = sobel(ch)
         h, w = ch.shape
         ch_resized = cv2.resize(ch, (w * upscale_factor, h * upscale_factor), interpolation=cv2.INTER_NEAREST)
         #ch_resized_sobel = cv2.resize(ch_sobel, (w * upscale_factor, h * upscale_factor), interpolation=cv2.INTER_NEAREST)
         ch_colored = cv2.applyColorMap(ch_resized, cv2.COLORMAP_VIRIDIS)
-        
-        #ch_resized_sobel = np.stack([ch_resized_sobel] * 3, axis=-1)
 
+        #ch_resized_sobel = np.stack([ch_resized_sobel] * 3, axis=-1)
         #ch_resized_sobel = cv2.cvtColor(ch_resized_sobel, cv2.COLOR_GRAY2BGR)
         cv2.putText(ch_colored, f"Ch: {idx}", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255,255,255), 1)
         #sobel_list.append(ch_resized_sobel)
         combined_img.append(ch_colored)
         #print(f"Сумма пикселей изображения {idx} = ", np.sum(ch_resized_sobel))
-
-    # Склеиваем в одну плитку
     res = np.hstack(combined_img)
     #res2 = np.hstack(sobel_list)
-
     return res
 
 def show_max_activation(feature_map, upscale_factor=4):
-    """
-    Визуализирует карту признаков, выбирая максимальную активацию среди всех каналов.
-    Это помогает увидеть четкие границы объектов, которые "заметила" сеть.
-    """
-    # 1. Находим максимум по всем каналам (dim=1)
-    # feature_map имеет форму [1, 256, H, W]
-    # Результат будет [1, H, W]
+    """Визуализирует карту признаков, выбирая максимальную активацию среди всех каналов"""
     max_feat, _ = torch.max(feature_map[0], dim=0)
-    
-    # Переводим в numpy
     max_feat = max_feat.cpu().detach().numpy()
-    
-    # 2. Нормализация значений в диапазон 0-255
     f_min = max_feat.min()
     f_max = max_feat.max()
     if f_max > f_min:
         max_feat = (max_feat - f_min) / (f_max - f_min)
     
     max_feat_img = (max_feat * 255).astype(np.uint8)
-    
-    # 3. Увеличение размера (масштабирование под оригинал)
+
     h, w = max_feat_img.shape
     max_feat_img = cv2.resize(max_feat_img, (w * upscale_factor, h * upscale_factor), 
                                interpolation=cv2.INTER_LINEAR)
-    
-    # 4. Применение цветовой карты для наглядности (опционально)
-    # Можно использовать COLORMAP_BONE для рентгеновского эффекта или JET для теплового
-    colored_map = cv2.applyColorMap(max_feat_img, cv2.COLORMAP_MAGMA)
+    #colored_map = cv2.applyColorMap(max_feat_img, cv2.COLORMAP_MAGMA)
     
     return max_feat_img
