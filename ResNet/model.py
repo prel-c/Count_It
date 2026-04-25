@@ -89,5 +89,3 @@ def weights_xavier_init(m):
         torch.nn.init.xavier_normal_(m.weight, gain=nn.init.calculate_gain('relu'))
         if m.bias is not None:
             torch.nn.init.zeros_(m.bias)
-            
-            
