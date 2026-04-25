@@ -81,12 +81,9 @@ Repository for the project on opd
 и копируем вообще всю строку, далее вставляем её в github:
 
   
+<img src="assets/image_1.png" alt="Описание" style="width: 200px;"/>
 
-![](assets\image_1.png)
-
-  
-
-![](assets\image_2.png)
+<img src="assets/image_2.png" alt="Описание" style="width: 200px;"/>
 
   
 
@@ -106,9 +103,7 @@ Repository for the project on opd
 
   
 
-`git switch "Имя Вашей ветки: Daniel, Petya, Nastya, Roma, Svyat"
-
-`
+`git switch "Имя Вашей ветки: Daniel, Petya, Nastya, Roma, Svyat"`
 
 Работать будем каждый в своей ветке, чтобы во время работы не смешивать изменения от разных разработчиков друг с другом. То есть каждый делает свою задачу и когда уже в ней не будет багов и она будет стабильна и минимально работоспособна, то она будет отправляться в ветку main. Далее можно например дополнить что-то в своей ветке, проверить, а потом снова отправить его в main.
 
