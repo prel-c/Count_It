@@ -1,6 +1,4 @@
-# opd
-
-repository for the computer vision project
+Repository for the computer vision project
 
 ## Overview
 
