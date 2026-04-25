@@ -1,12 +1,11 @@
 import os
 import numpy as np
-import matplotlib
-matplotlib.use('Qt5Agg')
 import matplotlib.pyplot as plt
 import cv2 as cv
 from utils import matlab_style_gauss2D
 
-def generate_density_map(img_shape, points, kernel_size=13, sigma=3):
+def generate_density_map(img_shape, points, sigma=3):
+    'Генерирует "идеальную" карту плотности для обучения'
     density_map = np.zeros((img_shape[0], img_shape[1]), dtype=np.float32)
     h, w = img_shape[0], img_shape[1]
 
@@ -20,7 +19,7 @@ def generate_density_map(img_shape, points, kernel_size=13, sigma=3):
         # Пропускаем точки, которые оказались вне картинки
         if x < 0 or x >= w or y < 0 or y >= h:
             continue
-        
+
         x1 = max(0, x - pad)
         y1 = max(0, y - pad)
         x2 = min(w, x + pad + 1)
@@ -31,7 +30,6 @@ def generate_density_map(img_shape, points, kernel_size=13, sigma=3):
         kx2 = pad + (x2 - x)
         ky2 = pad + (y2 - y)
 
-        # Прибавляем гауссово пятно к карте
         density_map[y1:y2, x1:x2] += matlab_style_gauss2D(shape=(kernel, kernel), sigma=sigma)[ky1:ky2, kx1:kx2]
     
     total_points = len(points)
@@ -67,56 +65,8 @@ with open(path + "/labels/pipes_pipes_images (48)_1__1.txt", 'r', encoding='utf-
         x1, y1, x2, y2 = yolo_to_pixels(box, w, h)
         cv.rectangle(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
 
-"""IMG_H, IMG_W = 384, 576
-k = 1
-for filename in os.listdir("data/images_384_VarV2"):
-    print(filename)
-    points_of_center = []
-
-    with open(f"data/lab_new/{filename[:len(filename) - 4]}.txt", 'r', encoding='utf-8') as data:
-        for box in data:
-            box = tuple(map(float, box.split()))
-            points_of_center.append((box[1]*IMG_W, box[2]*IMG_H, box[3]*IMG_W, box[4]*IMG_H))
-    karta = generate_density_map((IMG_H, IMG_W), points_of_center)
-    print(karta.max())
-
-    np.save(f"data/gt_density_map_adaptive_384_VarV2/{filename[:len(filename) - 4]}.npy", karta)
-    if k % 10 == 0:
-        print(f"Обработано {k} фото...")
-    k += 1"""
-
-
-
-"""plt.figure(figsize=(15, 6))
-
-# Оригинальное фото с точками
-plt.subplot(1, 2, 1)
-plt.imshow(image)
-for p in points_of_center:
-    plt.scatter(p[0], p[1], c='red', s=10, marker='x') # рисуем крестики
-plt.title(f'Оригинал (Объектов: {len(points_of_center)})')
-plt.axis('off')
-
-# Карта плотности
-plt.subplot(1, 2, 2)
-plt.imshow(karta, cmap='jet') # colormap 'jet' отлично подходит для тепловых карт
-plt.colorbar(label='Плотность')
-plt.title(f'Карта плотности (Сумма: {np.sum(karta)})')
-plt.axis('off')
-
-plt.tight_layout()
-save_path = 'density_map_result.png'
-plt.savefig(save_path)
-print(f"Результат сохранен в файл: {save_path}")"""
-
-
-
 file = np.load("density_map_result.npy")
 file = np.squeeze(file)
 plt.xlabel(sum(sum(file)))
 plt.imshow(file)
 plt.savefig("output.png")
-
-"""cv.imshow('1', file)
-cv.waitKey(0)
-cv.destroyAllWindows()"""

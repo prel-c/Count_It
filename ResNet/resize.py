@@ -4,14 +4,15 @@ from PIL import Image
 from tqdm import tqdm
 
 def process_dataset(img_in, anno_in, img_out, anno_out, target_size=(576, 384)):
+    """переименовывает и синхронизует с анотациями файлы"""
     for folder in [img_out, anno_out]:
         if not os.path.exists(folder):
             os.makedirs(folder)
 
-    valid_img_exts = ('.jpg', '.jpeg', '.png', '.bmp', '.webp')
+    valid_img_exts = ('.jpg', '.jpeg', '.png')
     
     image_files = [f for f in os.listdir(img_in) if f.lower().endswith(valid_img_exts)]
-    image_files.sort() # Важно для сохранения порядка
+    image_files.sort()
 
     print(f"Найдено пар для обработки: {len(image_files)}")
 
@@ -45,4 +46,3 @@ IMG_OUTPUT = 'data/my/Pipes_340/img_new'
 ANNO_OUTPUT = 'data/my/Pipes_340/lab_new'
 
 process_dataset(IMG_INPUT, ANNO_INPUT, IMG_OUTPUT, ANNO_OUTPUT)
-print("\nГотово! Все файлы переименованы и синхронизированы.")
