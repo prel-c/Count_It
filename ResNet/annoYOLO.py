@@ -6,7 +6,7 @@ import os
 
 def visualize_yolo_annotations(image_path, txt_path, save_path=None):
     """
-    Рисует боксы из YOLO-аннотации на изображении.
+    Рисует боксы из YOLO-аннотации на изображении
     """
     image = cv2.imread(image_path)
 

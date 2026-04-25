@@ -4,6 +4,7 @@ import cv2
 import numpy as np
 
 def convert_yolo_to_fsc_json(img_dir, anno_dir, output_json):
+    """Переводит аннотации формата YOLO под формат FSC-147"""
     fsc_annotations = {}
     all_image_ids = []
 
@@ -26,7 +27,7 @@ def convert_yolo_to_fsc_json(img_dir, anno_dir, output_json):
         if os.path.exists(txt_path):
             with open(txt_path, 'r') as f:
                 for line in f:
-                    # YOLO: class x_center y_center width height (normalized)
+                    # YOLO: class x_center y_center width height (нормализованные)
                     parts = list(map(float, line.strip().split()))
                     if len(parts) < 5: continue
                     
