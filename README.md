@@ -84,6 +84,18 @@ Repository for the computer vision project
 - плохая работа со сложным фоном
 - плохо считает объекты с перекрытиями
 
+### 4. Результаты экспериментов (MAE / RMSE)
+
+| Pipeline | MAE | RMSE |
+|----------|-----|------|
+| 1. FamNet (baseline) | 23.75 | 69.07 |
+| 2. Segmentation + FamNet | 21.04 | 52.31 |
+| 3. Loca (базовая) | 11.36 | 38.04 |
+| 4. Segmentation + Loca | 8.31 | 37.04* |
+| 5. Классический (наш) | 29.89 | 86.13 |
+| 6. YOLO (FSC-147) | 36.53 | 116.02 |
+| 7. SAFECount (SOTA) | 15.28 | 47.20 |
+
 ---
 
 ## Technologies
@@ -112,3 +124,6 @@ Repository for the computer vision project
 **Matplotlib** — построение карт плотности, наложение масок на оригинальные изображения и вывод.
 
 **tqdm**, **JSON**...
+
+
+
