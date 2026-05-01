@@ -6,11 +6,11 @@ loca/train_few_shot.sh
 loca/train_zero_shot.sh
 loca/utils/__pycache__/
 loca/models/__pycache__/
-ResNet/data/
-ResNet/images/
-ResNet/logsSave/
-ResNet/__pycache__/
-ResNet/.vscode/
+FamNet/data/
+FamNet/images/
+FamNet/logsSave/
+FamNet/__pycache__/
+FamNet/.vscode/
 Template/image/
 Segmentation/SAM/data/sam_vit_b_01ec64.pth
 .vscode
