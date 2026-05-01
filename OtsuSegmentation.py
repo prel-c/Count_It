@@ -9,9 +9,13 @@ def otsu(filename: str, sigma: float) -> np.ndarray | None:
         img2crop = cv2.imread(image_name)
         if img2crop is None:
             return None
-        roi = cv2.selectROI("Select Area", img2crop, fromCenter=False, showCrosshair=True)
+        window_name = "Select Area"
+        cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
+        roi = cv2.selectROI(window_name, img2crop, fromCenter=False, showCrosshair=True)
+        cv2.destroyWindow(window_name)
         x, y, w, h = map(int, roi)
         cv2.destroyAllWindows()
+        img2crop = cv2.cvtColor(img2crop, cv2.COLOR_BGR2RGB)
         cropped_img = img2crop[y:y + h, x:x + w]
         return cropped_img
 
