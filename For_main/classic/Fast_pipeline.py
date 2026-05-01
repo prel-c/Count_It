@@ -8,51 +8,28 @@ ____________________________________________________
 ____________________________________________________
 
 """
-
-def LBP(i, j, photo):
-    """
-    Функция поиска локального бинарного шаблона (LBP) и перевод его в десятичную систему
-
-    Ввод - координаты пикселя и матрица ч/б изображения
-    Вывод - число в десятичной системе, соответсвующее LBP
-
-    """
-    st=[]
-    lbp=0
-    px = [(i-1, j),
-          (i-1, j+1),
-          (i, j+1),
-          (i+1, j+1),
-          (i+1, j),
-          (i+1, j-1),
-          (i, j-1),
-          (i-1, j-1)]
-
-    if 0<i<len(photo)-1 and 0<j<len(photo[0])-1:
-        for i1, j1 in px:
-            if photo[i1, j1]>photo[i, j]:
-                st.append(1)
-            else:
-                st.append(0)
-        for i in range (len(st)):
-            lbp+=st[i]*2**(len(st)-1-i)
-        return(lbp)
-    else:
-        return 0
-
-def LBP_Matrix(photo):
-    """
-    Функция для создания матрицы из LBP
-
-    Ввод - матрица ч/б изображения
-    Вывод - матрица из LBP
-
-    """
-    LBP_img=np.full((len(photo), len(photo[0])), np.nan)
-    for i in range (1, len(photo)-1):
-        for j in range (1, len(photo[0])-1):
-            LBP_img[i, j]=LBP(i, j, photo)
+def LBP_Matrix_fast(photo):
+    """Быстрая версия создания LBP матрицы"""
+    h, w = photo.shape
+    LBP_img = np.zeros((h, w), dtype=np.uint8)
+    
+    # Предварительно вычисляем пороговые значения
+    for i in range(1, h-1):
+        for j in range(1, w-1):
+            center = photo[i, j]
+            # Векторизованная проверка соседей
+            code = 0
+            code |= (photo[i-1, j] > center) << 7
+            code |= (photo[i-1, j+1] > center) << 6
+            code |= (photo[i, j+1] > center) << 5
+            code |= (photo[i+1, j+1] > center) << 4
+            code |= (photo[i+1, j] > center) << 3
+            code |= (photo[i+1, j-1] > center) << 2
+            code |= (photo[i, j-1] > center) << 1
+            code |= (photo[i-1, j-1] > center) << 0
+            LBP_img[i, j] = code
     return LBP_img
+
 
 def LBP_Ghist(LBP_img):
     """
@@ -158,7 +135,7 @@ def cheking(image, rectangle, ghist1):
     w=rectangle[2]
     h=rectangle[3]
     img=image[y:y+h, x:x+w]
-    img=LBP_Matrix(img)
+    img=LBP_Matrix_fast(img)
     ghist=LBP_Ghist_normalization(LBP_Ghist(img))
     if chi_square(ghist, ghist1, epsilon=1e-10) is True:
         return True
@@ -353,7 +330,7 @@ for i in range (0, len(template)*2//3, 2):
     cv2.imwrite('t.jpg', image_rec_t)
 
     # Создание LBP гистограммы для шаблона
-    LBP_img=LBP_Matrix(Filtered_te)
+    LBP_img=LBP_Matrix_fast(template_copy)
     ghist1=LBP_Ghist_normalization(LBP_Ghist(LBP_img))
 
     # Удаление лишних прямоугольников
@@ -362,10 +339,14 @@ for i in range (0, len(template)*2//3, 2):
     # Проверка с помощью метода LBP 
     rectangles_new=[]
     for rectangle in all_rectangles: 
-        check = cheking(Filtered_im, rectangle, ghist1)
+        check = cheking(image, rectangle, ghist1)
         if check is True:
             rectangles_new.append(rectangle)
 
 image_rec_final = drawing_rec(image_RGB, rectangles_new)
 cv2.imwrite('Final_Check.jpg', image_rec_final)
 print("Финальное количество уникальных объектов:", len(rectangles_new))
+
+
+
+# Исправить cheking
