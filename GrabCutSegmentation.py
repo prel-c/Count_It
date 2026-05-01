@@ -3,8 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def grabcut(image_name: str) -> np.ndarray | None:
-    img = cv2.imread(image_name)
+def grabcut(img: np.ndarray) -> np.ndarray | int | None:
     if img is None:
         return None
     window_name = "Select Area"
@@ -22,6 +21,7 @@ def grabcut(image_name: str) -> np.ndarray | None:
     rect = (1, 1, w - 2, h - 2)
     cv2.grabCut(cropped_img, mask, rect, background, obj, 3, cv2.GC_INIT_WITH_RECT)
     binary = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+    square = np.sum(binary)
     segmented = cropped_img * binary[:, :, np.newaxis]
     # Uncomment to test:
     """
@@ -42,7 +42,7 @@ def grabcut(image_name: str) -> np.ndarray | None:
     plt.tight_layout()
     plt.show()
     """
-    return segmented
+    return segmented, square
 
 
-# test_image = grabcut('your_image.jpg')
+# test_image = grabcut('materials-python-pillow/strawberry.jpg')

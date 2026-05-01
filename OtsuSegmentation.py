@@ -12,7 +12,6 @@ def otsu(filename: str, sigma: float) -> np.ndarray | None:
         roi = cv2.selectROI("Select Area", img2crop, fromCenter=False, showCrosshair=True)
         x, y, w, h = map(int, roi)
         cv2.destroyAllWindows()
-        img2crop = cv2.cvtColor(img2crop, cv2.COLOR_BGR2RGB)
         cropped_img = img2crop[y:y + h, x:x + w]
         return cropped_img
 
@@ -27,7 +26,7 @@ def otsu(filename: str, sigma: float) -> np.ndarray | None:
     """
     fig, ax = plt.subplots(1, 3, figsize=(10, 5))
 
-    ax[0].imshow(image)
+    ax[0].imshow(image.astype(np.float64))
     ax[0].set_title("Original image")
     ax[0].axis("off")
 
