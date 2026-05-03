@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import matplotlib.pyplot as plt
 
 """
 ____________________________________________________
@@ -303,5 +304,10 @@ for i in range (0, len(template)*2//3, 1):
             rectangles_new.append(rectangle)
 
 image_rec_final = drawing_rec(image_RGB, rectangles_new)
-cv2.imwrite('Final_Check.jpg', image_rec_final)
+plt.figure(figsize=(10, 8))
+plt.imshow(cv2.cvtColor(image_rec_final, cv2.COLOR_BGR2RGB))  # Конвертируем BGR в RGB
+plt.title('Final_Check')
+plt.axis('off')
+plt.show()
+#cv2.imwrite('Final_Check.jpg', image_rec_final)
 print("Финальное количество уникальных объектов:", len(rectangles_new))
