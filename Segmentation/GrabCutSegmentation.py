@@ -3,19 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def grabcut(image: np.ndarray ) -> np.ndarray | None:
-    """img = cv2.imread(image_name)
-    if img is None:
-        return None
-    window_name = "Select Area"
-    cv2.namedWindow(window_name, cv2.WINDOW_NORMAL)
-    roi = cv2.selectROI(window_name, img, fromCenter=False, showCrosshair=True)
-    cv2.destroyWindow(window_name)
-    img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
-    x, y, w, h = map(int, roi)
-    if w == 0 or h == 0:
-        return None
-    cropped_img = img[y:y + h, x:x + w]"""      
+def grabcut(image: np.ndarray, area_threshold: float = 0.05) -> np.ndarray | None:
 
     cropped_img = image
     h, w, _ = cropped_img.shape
@@ -23,8 +11,19 @@ def grabcut(image: np.ndarray ) -> np.ndarray | None:
     background = np.zeros((1, 65), np.float64)
     obj = np.zeros((1, 65), np.float64)
     rect = (1, 1, w - 2, h - 2)
-    cv2.grabCut(cropped_img, mask, rect, background, obj, 3, cv2.GC_INIT_WITH_RECT)
+    cv2.grabCut(cropped_img, mask, rect, background, obj, 2, cv2.GC_INIT_WITH_RECT)
     binary = np.where((mask == 2) | (mask == 0), 0, 1).astype('uint8')
+
+    remaining_pixels = np.sum(binary)
+    remaining_area_ratio = remaining_pixels / (h * w)
+    if remaining_area_ratio < area_threshold:
+        return image
+
+    """mean_color = cv2.mean(image)[:3]
+    background_cloth = np.full(image.shape, mean_color, dtype=np.uint8)
+    mask_3d = binary[:, :, np.newaxis]      
+    segmented = np.where(mask_3d == 1, image, background_cloth)"""
+
     segmented = cropped_img * binary[:, :, np.newaxis]
 
     # Uncomment to test:
