@@ -88,7 +88,7 @@ def chi_square(hist1, hist2, epsilon=1e-10):
 
     """
     chi_square=np.sum((hist1 - hist2) ** 2 / (hist1 + hist2 + epsilon))
-    if chi_square < 0.5:
+    if chi_square < 0.4:
         return True
     else:
         return False

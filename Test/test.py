@@ -78,7 +78,7 @@ def test(image, template):
         """
         return ghistogramm/np.sum(ghistogramm)
 
-    def chi_square(hist1, hist2, epsilon=1e-10):
+    def chi_square(hist1, hist2, treshold):
 
         """
         Функция проверки связи между гистограммами.
@@ -87,8 +87,8 @@ def test(image, template):
         Вывод - Истина/ Ложь
 
         """
-        chi_square=np.sum((hist1 - hist2) ** 2 / (hist1 + hist2 + epsilon))
-        if chi_square < 0.5:
+        chi_square=np.sum((hist1 - hist2) ** 2 / (hist1 + hist2 + 1e-10))
+        if chi_square < treshold:
             return True
         else:
             return False
@@ -143,7 +143,7 @@ def test(image, template):
             cv2.rectangle(image, (x,y), (x+w,y+h), 150, 2)
         return image
 
-    def cheking(image, rectangle, ghist1):
+    def cheking(image, rectangle, ghist1, treshold):
 
         """
         Функция проверки методом LBP областей найденных с помощью шаблонного поиска
@@ -160,7 +160,7 @@ def test(image, template):
         img=image[y:y+h, x:x+w]
         img=LBP_Matrix(img)
         ghist=LBP_Ghist_normalization(LBP_Ghist(img))
-        if chi_square(ghist, ghist1, epsilon=1e-10) is True:
+        if chi_square(ghist, ghist1, treshold) is True:
             return True
         else:
             return False
@@ -270,7 +270,7 @@ def test(image, template):
     template_copy=np.copy(template)
     all_rectangles = []
 
-    for i in range (0, len(template)*2//3, 2):
+    for i in range (0, len(template)*2//3, 1):
 
         # Именение масштаба изображения
         new_size = (len(template[0])-i, len(template)-i) 
@@ -280,7 +280,7 @@ def test(image, template):
         # Шаблонный поиск
         rectangles, count_template_search=template_search(Magnitude_im, Magnitude_te)
         all_rectangles.extend(rectangles)
-        image_rec_t = drawing_rec(image_RGB_copy, rectangles)
+        #image_rec_t = drawing_rec(image_RGB_copy, rectangles)
 
         # Создание LBP гистограммы для шаблона
         LBP_img=LBP_Matrix(template_copy)
@@ -292,7 +292,7 @@ def test(image, template):
         # Проверка с помощью метода LBP 
         rectangles_new=[]
         for rectangle in all_rectangles: 
-            check = cheking(image, rectangle, ghist1)
+            check = cheking(image, rectangle, ghist1, 0.5)
             if check is True:
                 rectangles_new.append(rectangle)
 
