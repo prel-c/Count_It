@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from scipy.ndimage import convolve
-from sklearn.feature_extraction.image import extract_patches_2d
+
 
 def test_optimized(image, template):
     """Оптимизированная версия"""
@@ -21,14 +21,14 @@ def test_optimized(image, template):
         img_pad = np.pad(img, 1, mode='constant')                                   # Увеличиваем матрицу до размеров i+2, j+2
 
         neighbors = [                                                               # Создаём матрицы такого же размера как и img, но сдвинутые в ту сторону относительно которой мы сравниваем
-            img_pad[:-2, 1:-1],                                                         # вверх       
-            img_pad[:-2, 2:],                                                           # вверх-вправо
-            img_pad[1:-1, 2:],                                                          # вправо
-            img_pad[2:, 2:],                                                            # вниз-вправо
-            img_pad[2:, 1:-1],                                                          # вниз
-            img_pad[2:, :-2],                                                           # вниз-влево
-            img_pad[1:-1, :-2],                                                         # влево
-            img_pad[:-2, :-2]                                                           # вверх-влево
+            img_pad[:-2, 1:-1],                                                         # север      
+            img_pad[:-2, 2:],                                                           # северо-восток
+            img_pad[1:-1, 2:],                                                          # восток
+            img_pad[2:, 2:],                                                            # юго-восток
+            img_pad[2:, 1:-1],                                                          # юг
+            img_pad[2:, :-2],                                                           # юго-запад
+            img_pad[1:-1, :-2],                                                         # запад
+            img_pad[:-2, :-2]                                                           # северо-запад
         ]           
 
         for i, n in enumerate(neighbors):                                           # Векторизованное сравнение
@@ -56,8 +56,8 @@ def test_optimized(image, template):
         Вывод - Матрица, содержащая в себе магнитуду каждого пикселя
 
         """ 
-        # Ядра Собеля
-        Gx = np.array([[-1, 0, 1], 
+        h, w = img.shape
+        Gx = np.array([[-1, 0, 1],                                                  # Создаём ядра собеля
                        [-2, 0, 2], 
                        [-1, 0, 1]], 
                        dtype=np.float32)
@@ -67,18 +67,40 @@ def test_optimized(image, template):
                        [1, 2, 1]], 
                        dtype=np.float32)
         
-        gx=
+        img_pad = np.pad(img, 1, mode='constant')                                   # Увеличиваем матрицу до размеров i+2, j+2
+        gx=(Gx[0,0]*img_pad[0:h, 0:w]+                                                  #-1*северо-запад
+            Gx[0,1]*img_pad[0:h, 1:w+1]+                                                # 0*север
+            Gx[0,2]*img_pad[0:h, 2:w+2]+                                                # 1*северо-восток
+            Gx[1,0]*img_pad[1:h+1, 0:w]+                                                #-2*запад
+            Gx[1,1]*img_pad[1:h+1, 1:w+1]+                                              # 0*центр
+            Gx[1,2]*img_pad[1:h+1, 2:w+2]+                                              # 2*восток
+            Gx[2,0]*img_pad[2:h+2, 0:w]+                                                #-1*юго-запад
+            Gx[2,1]*img_pad[2:h+2, 1:w+1]+                                              # 0*юг
+            Gx[2,2]*img_pad[2:h+2, 2:w+2])                                              # 1*юго-восток
 
-        # Конволюция через scipy (быстрее самодельных циклов)
-        gx = convolve(img.astype(np.float32), Gx, mode='constant')
-        gy = convolve(img.astype(np.float32), Gy, mode='constant')
+        gy=(Gy[0,0]*img_pad[0:h, 0:w]+                                                  #-1*северо-запад
+            Gy[0,1]*img_pad[0:h, 1:w+1]+                                                # 0*север
+            Gy[0,2]*img_pad[0:h, 2:w+2]+                                                # 1*северо-восток
+            Gy[1,0]*img_pad[1:h+1, 0:w]+                                                #-2*запад
+            Gy[1,1]*img_pad[1:h+1, 1:w+1]+                                              # 0*центр
+            Gy[1,2]*img_pad[1:h+1, 2:w+2]+                                              # 2*восток
+            Gy[2,0]*img_pad[2:h+2, 0:w]+                                                #-1*юго-западs
+            Gy[2,1]*img_pad[2:h+2, 1:w+1]+                                              # 0*юг
+            Gy[2,2]*img_pad[2:h+2, 2:w+2])                                              # 1*юго-вос      
         
         magnitude = np.sqrt(gx**2 + gy**2)
-        magnitude = (magnitude / (magnitude.max() + 1e-10)) * 255
+        magnitude = (magnitude / (magnitude.max() + 1e-10)) * 255                       
         return magnitude.astype(np.uint8)
     
     def template_search_multi_scale(magnitude_im, template_magnitude, scales, threshold=0.6):
-        """Поиск на нескольких масштабах без повторной обработки"""
+        """
+        Функция реализации шаблонного поиска
+
+        Ввод - Матрица, соответсвующая ч/б изображению
+        Вывод - Массив с координатами прямоугольников, соответсвующие потенциальным областям с объектом.
+                Число таких областей
+
+        """                      
         all_rectangles = []
         h_im, w_im = magnitude_im.shape
         h_tmpl, w_tmpl = template_magnitude.shape
@@ -160,14 +182,15 @@ def test_optimized(image, template):
     
     # LBP проверка (только для найденных прямоугольников)
     lbp_template = lbp_fast(template_blur)
-    hist_template = lbp_histogram_normalized(template_blur)
+    hist_template = lbp_histogram_normalized(lbp_template)
     
     valid_rectangles = []
     for rect in rectangles:
         x, y, w, h = map(int, rect)
         roi = image_blur[y:y+h, x:x+w]
         if roi.size > 0:
-            hist_roi = lbp_histogram_normalized(roi)
+            lbp_roi=lbp_fast(roi)
+            hist_roi = lbp_histogram_normalized(lbp_roi)
             # Вычисляем chi-square
             chi2 = np.sum((hist_roi - hist_template)**2 / (hist_roi + hist_template + 1e-10))
             if chi2 < 0.3:

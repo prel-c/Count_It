@@ -40,10 +40,11 @@ for i in range(1, 7716):
         res=test_optimized(image, template)
         ep=abs(len(positions)-res)/len(positions)
         epsilon.append(ep)
-        print(epsilon)
-        print(sum(epsilon)/len(epsilon))
         if ep>0.5:
             S.append(i)
-        print(S)
     except (FileNotFoundError, cv2.error):
         continue
+
+print(epsilon)
+print(sum(epsilon)/len(epsilon))
+print(S)
