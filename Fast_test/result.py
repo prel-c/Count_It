@@ -34,17 +34,17 @@ for i in range(1, 7716):
 
             for h in range (len (positions)):
                 cv2.rectangle(image1, (positions[h, 0], positions[h, 1]), (positions[h, 2], positions[h, 3]), (0, 255, 0), 2)
-            
-           
+             
             template=image[positions[1, 1]:positions[1, 3], positions[1, 0]:positions[1, 2]]
+
         res=test_optimized(image, template)
         ep=abs(len(positions)-res)/len(positions)
         epsilon.append(ep)
+        print(i)
         if ep>0.5:
             S.append(i)
     except (FileNotFoundError, cv2.error):
         continue
-
-print(epsilon)
+#print(epsilon)
 print(sum(epsilon)/len(epsilon))
-print(S)
+#print(S)
