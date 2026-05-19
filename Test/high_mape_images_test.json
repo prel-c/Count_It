@@ -1,0 +1,261 @@
+[
+    {
+        "image_id": "2.jpg",
+        "true_count": 8,
+        "pred_count": 2,
+        "error": 6,
+        "mape": 75.0
+    },
+    {
+        "image_id": "692.jpg",
+        "true_count": 11,
+        "pred_count": 2,
+        "error": 9,
+        "mape": 81.81818181818183
+    },
+    {
+        "image_id": "2019.jpg",
+        "true_count": 14,
+        "pred_count": 5,
+        "error": 9,
+        "mape": 64.28571428571429
+    },
+    {
+        "image_id": "2143.jpg",
+        "true_count": 9,
+        "pred_count": 2,
+        "error": 7,
+        "mape": 77.77777777777779
+    },
+    {
+        "image_id": "2181.jpg",
+        "true_count": 12,
+        "pred_count": 2,
+        "error": 10,
+        "mape": 83.33333333333334
+    },
+    {
+        "image_id": "2262.jpg",
+        "true_count": 9,
+        "pred_count": 18,
+        "error": 9,
+        "mape": 100.0
+    },
+    {
+        "image_id": "2267.jpg",
+        "true_count": 9,
+        "pred_count": 2,
+        "error": 7,
+        "mape": 77.77777777777779
+    },
+    {
+        "image_id": "2935.jpg",
+        "true_count": 13,
+        "pred_count": 21,
+        "error": 8,
+        "mape": 61.53846153846154
+    },
+    {
+        "image_id": "3342.jpg",
+        "true_count": 12,
+        "pred_count": 4,
+        "error": 8,
+        "mape": 66.66666666666666
+    },
+    {
+        "image_id": "3696.jpg",
+        "true_count": 8,
+        "pred_count": -2,
+        "error": 10,
+        "mape": 125.0
+    },
+    {
+        "image_id": "4115.jpg",
+        "true_count": 8,
+        "pred_count": 0,
+        "error": 8,
+        "mape": 100.0
+    },
+    {
+        "image_id": "4173.jpg",
+        "true_count": 11,
+        "pred_count": 1,
+        "error": 10,
+        "mape": 90.9090909090909
+    },
+    {
+        "image_id": "4292.jpg",
+        "true_count": 11,
+        "pred_count": 20,
+        "error": 9,
+        "mape": 81.81818181818183
+    },
+    {
+        "image_id": "4498.jpg",
+        "true_count": 12,
+        "pred_count": 4,
+        "error": 8,
+        "mape": 66.66666666666666
+    },
+    {
+        "image_id": "4500.jpg",
+        "true_count": 8,
+        "pred_count": 14,
+        "error": 6,
+        "mape": 75.0
+    },
+    {
+        "image_id": "4888.jpg",
+        "true_count": 14,
+        "pred_count": 4,
+        "error": 10,
+        "mape": 71.42857142857143
+    },
+    {
+        "image_id": "4904.jpg",
+        "true_count": 11,
+        "pred_count": 20,
+        "error": 9,
+        "mape": 81.81818181818183
+    },
+    {
+        "image_id": "5382.jpg",
+        "true_count": 9,
+        "pred_count": 16,
+        "error": 7,
+        "mape": 77.77777777777779
+    },
+    {
+        "image_id": "5383.jpg",
+        "true_count": 10,
+        "pred_count": 18,
+        "error": 8,
+        "mape": 80.0
+    },
+    {
+        "image_id": "5385.jpg",
+        "true_count": 9,
+        "pred_count": 16,
+        "error": 7,
+        "mape": 77.77777777777779
+    },
+    {
+        "image_id": "5387.jpg",
+        "true_count": 8,
+        "pred_count": 16,
+        "error": 8,
+        "mape": 100.0
+    },
+    {
+        "image_id": "5562.jpg",
+        "true_count": 13,
+        "pred_count": 3,
+        "error": 10,
+        "mape": 76.92307692307693
+    },
+    {
+        "image_id": "5575.jpg",
+        "true_count": 12,
+        "pred_count": 2,
+        "error": 10,
+        "mape": 83.33333333333334
+    },
+    {
+        "image_id": "5581.jpg",
+        "true_count": 8,
+        "pred_count": 15,
+        "error": 7,
+        "mape": 87.5
+    },
+    {
+        "image_id": "5819.jpg",
+        "true_count": 9,
+        "pred_count": -1,
+        "error": 10,
+        "mape": 111.11111111111111
+    },
+    {
+        "image_id": "5828.jpg",
+        "true_count": 12,
+        "pred_count": 4,
+        "error": 8,
+        "mape": 66.66666666666666
+    },
+    {
+        "image_id": "5850.jpg",
+        "true_count": 9,
+        "pred_count": 18,
+        "error": 9,
+        "mape": 100.0
+    },
+    {
+        "image_id": "5918.jpg",
+        "true_count": 12,
+        "pred_count": 21,
+        "error": 9,
+        "mape": 75.0
+    },
+    {
+        "image_id": "5926.jpg",
+        "true_count": 10,
+        "pred_count": 18,
+        "error": 8,
+        "mape": 80.0
+    },
+    {
+        "image_id": "5931.jpg",
+        "true_count": 9,
+        "pred_count": 15,
+        "error": 6,
+        "mape": 66.66666666666666
+    },
+    {
+        "image_id": "5937.jpg",
+        "true_count": 10,
+        "pred_count": 2,
+        "error": 8,
+        "mape": 80.0
+    },
+    {
+        "image_id": "5942.jpg",
+        "true_count": 10,
+        "pred_count": 0,
+        "error": 10,
+        "mape": 100.0
+    },
+    {
+        "image_id": "6245.jpg",
+        "true_count": 12,
+        "pred_count": 20,
+        "error": 8,
+        "mape": 66.66666666666666
+    },
+    {
+        "image_id": "6258.jpg",
+        "true_count": 13,
+        "pred_count": 5,
+        "error": 8,
+        "mape": 61.53846153846154
+    },
+    {
+        "image_id": "6274.jpg",
+        "true_count": 10,
+        "pred_count": 1,
+        "error": 9,
+        "mape": 90.0
+    },
+    {
+        "image_id": "6279.jpg",
+        "true_count": 10,
+        "pred_count": 19,
+        "error": 9,
+        "mape": 90.0
+    },
+    {
+        "image_id": "7106.jpg",
+        "true_count": 13,
+        "pred_count": 22,
+        "error": 9,
+        "mape": 69.23076923076923
+    }
+]

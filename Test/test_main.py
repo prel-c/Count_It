@@ -150,7 +150,7 @@ if __name__ == "__main__":
     #"cuda" if torch.cuda.is_available() else 
     device = torch.device("cpu")
 
-    data_path = '/mnt/c/CV/FSC147_modifications/FSC147/'
+    data_path = '/mnt/c/CV/FSC147_modifications/FSC147O/'
 
     names_images = 'test' #выбор по какой выборке из датасета делать тестирование
     #выборки (список имён изображений) записанны в файле Train_Test_Val_FSC_147.json
