@@ -25,11 +25,10 @@ predictor = SamPredictor(sam)
 
 mask_generator = SamAutomaticMaskGenerator(
 sam,
-points_per_side=12, #16
+points_per_side=12,
 pred_iou_thresh=0.8,
 stability_score_thresh=0.9,
-# box_nms_thresh=0.3,
-min_mask_region_area=500 #500
+min_mask_region_area=500
 )
 
 
@@ -82,7 +81,7 @@ def crop_object(image, mask, target_size=224):
 
     square[y_offset:y_offset + h, x_offset:x_offset + w] = crop
 
-    # --- теперь resize БЕЗ искажений ---
+    # Теперь resize БЕЗ искажений
     square = cv2.resize(square, (target_size, target_size))
 
     return square
@@ -145,14 +144,12 @@ def get_reference(image, point_xy):
     )
 
     best_mask = masks[np.argmax(scores)]
-    # print(type(best_mask))
 
     crop = crop_object(image_resized, best_mask)
     if crop is None:
         raise ValueError("Не удалось выделить объект")
 
     features = extract_features(crop)
-    # print('признаки эталона:', features[0][:20])
 
     return features, image_resized, best_mask, point_scaled
 
@@ -227,63 +224,10 @@ def compute_threshold(distances: list, direction: str = 'left', k_sigma: float =
 
     return float(threshold)
 
-"""def compute_threshold(distances):
-    d = np.sort(distances)
-    return np.median(d)+0.05
-
-    if len(d) < 2:
-        return 0.25
-
-    d = d[2:]
-
-    gaps = np.diff(d)
-
-    left_points = d[:-1]
-
-    # Эмпирически
-    weights = np.exp(-0.5 * left_points)
-
-    weighted_gaps = gaps * weights
-
-    best = np.argmax(weighted_gaps)
-
-    # t = (d[best] + d[best + 1]) / 2
-    t = d[best]
-
-    # ограничиваем threshold
-    #t = max(t, 0.08)
-    t = min(t, 0.25)
-
-    return t"""
-
 def find_similar_objects(image, ref_feature):
     image_resized, _ = resize_image(image)
 
     masks = mask_generator.generate(image_resized)
-
-    # Визуализация всех масок SAM
-    plt.figure(figsize=(12, 12))
-    plt.imshow(image_resized)
-
-    for ann in masks:
-        mask = ann["segmentation"]
-
-        # случайная прозрачная маска
-        color = np.random.rand(3)
-
-        overlay = np.zeros((*mask.shape, 4))
-        overlay[..., :3] = color
-        overlay[..., 3] = mask * 0.35
-
-        plt.imshow(overlay)
-
-    plt.title(f"Все маски SAM ({len(masks)})")
-    plt.axis("off")
-    plt.show()
-
-    # print(f"Всего масок: {len(masks)}")
-
-    #print(f"Всего масок SAM: {len(masks)}")
 
     candidates = []
 
@@ -297,7 +241,6 @@ def find_similar_objects(image, ref_feature):
 
         # 1. извлекаем признаки объекта
         obj_feats = extract_features(crop)
-        # print('признаки масок:', obj_feats[0][:20])
 
         # 2. сравниваем с эталоном
         dist = match_features(ref_feature, obj_feats)
@@ -310,23 +253,7 @@ def find_similar_objects(image, ref_feature):
     dists = [d for _, d in candidates]
     threshold = compute_threshold(dists)
 
-    # print(sorted(dists)[:20])
-    # print("Auto threshold:", threshold)
-
     results = [(m, d) for (m, d) in candidates if d < threshold]
-
-
-    """# Визуализация масок-кандидатов
-    for mask, dist in results:
-        overlay = np.zeros((*mask.shape, 4))
-        overlay[..., :3] = np.random.rand(3)
-        overlay[..., 3] = mask * 0.45
-
-        plt.imshow(overlay)"""
-
-    plt.title(f"Отобранные объекты ({len(results)})")
-    plt.axis("off")
-    plt.show()
 
     if len(results) == 0:
         best = min(candidates, key=lambda x: x[1])
@@ -336,21 +263,6 @@ def find_similar_objects(image, ref_feature):
 
 
 # 6. Визуализация
-
-"""def show_results(image, masks_with_dist, ref_point=None):
-    plt.figure(figsize=(10, 10))
-    plt.imshow(image)
-
-    for mask, dist in masks_with_dist:
-        plt.imshow(mask, alpha=0.4)
-
-    if ref_point is not None:
-        plt.scatter(ref_point[0], ref_point[1], c="red", s=100)
-
-    plt.title(f"Найдено: {len(masks_with_dist)}")
-    plt.axis("off")
-    plt.show()"""
-
 
 def show_results(image, masks_with_dist, ref_point=None):
     plt.figure(figsize=(12, 12))

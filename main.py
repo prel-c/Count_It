@@ -22,8 +22,6 @@ if __name__ == "__main__":
     plt.show()
 
     print("Поиск объектов...")
-    # Вместо передачи пути:
-    # results, scene_img, distances, threshold = find_similar_objects(SCENE_IMAGE, ref_feat)
 
     # Загружаем изображение сцены:
     scene_img = cv2.imread(SCENE_IMAGE)
