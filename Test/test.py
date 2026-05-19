@@ -106,7 +106,7 @@ def test(image, template, image1):
             te_new=cv2.resize(magnitude_te, (w_te_new, h_te_new))                   # Масштабирование шаблона до нового размера
             result=cv2.matchTemplate(magnitude_im, te_new, cv2.TM_CCOEFF_NORMED)    # Шаблонный поиск
             
-            ys, xs=np.where(result>=0.15)                                            # Позиции с удовлетворяющим сходством 
+            ys, xs=np.where(result>=0.3)                                            # Позиции с удовлетворяющим сходством 
             
             for x, y in zip(xs, ys):                                                # Сохраняем все позиции с удовлетворяющим результатом
                 all_rectangles.append([x, y, w_te_new, h_te_new])
@@ -185,7 +185,7 @@ def test(image, template, image1):
             lbp_Reg=LBP(Reg)                                                        # Получение LBP картинки региона
             hist_Reg=LBP_hist(lbp_Reg)                                              # Получение LBP гистограммы региона
             chi2=np.sum((hist_Reg-hist_template)**2/(hist_Reg+hist_template+1e-10)) # Вычисляем хи квадрат
-            if chi2<0.2:                                                            
+            if chi2<0.3:                                                            
                 valid_rectangles.append(rect)
                 cv2.rectangle(image1, (rect[0], rect[1]), (rect[0]+rect[2], rect[1]+rect[3]), (0, 255, 0), 2)
     #valid_rectangles=NMS(valid_rectangles)
