@@ -105,7 +105,7 @@ class FSC147Dataset(Dataset):
 
         density_map = torch.from_numpy(np.load(os.path.join(
             self.data_path,
-            'gt_density_map_adaptive_512_512_object_VarV2',
+            'gt_density_map_adaptive_384_VarV2',
             os.path.splitext(self.image_names[idx])[0] + '.npy',
         ))).unsqueeze(0)
 
@@ -144,7 +144,7 @@ def generate_density_maps(data_path, target_size=(512, 512)):
 
     density_map_path = os.path.join(
         data_path,
-        f'gt_density_map_adaptive_{target_size[0]}_{target_size[1]}_object_VarV2'
+        f'gt_density_map_adaptive_384_VarV2'
     )
     if not os.path.isdir(density_map_path):
         os.makedirs(density_map_path)

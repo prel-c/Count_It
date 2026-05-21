@@ -13,12 +13,13 @@ from tqdm import tqdm
 import torch.optim as optim
 from Segmentation.OtsuSegmentation import otsu
 from Segmentation.GrabCutSegmentation import grabcut
+from Segmentation.SAM.SAM import sam_test
 
 
 parser = argparse.ArgumentParser(description="test on dataset")
 parser.add_argument("-dp", "--data_path", type=str, default='./FamNet/data/', help="Path to the your dataset")
-parser.add_argument("-ts", "--test_split", type=str, default='val', choices=["val_PartA","val_PartB","test_PartA","test_PartB","test", "val"])
-parser.add_argument("-m",  "--model_path", type=str, default="./FamNet/data/pretrainedModels/FamNet_Save1.pth", help="path to trained model")
+parser.add_argument("-ts", "--test_split", type=str, default='test', choices=["val_PartA","val_PartB","test_PartA","test_PartB","test", "val"])
+parser.add_argument("-m",  "--model_path", type=str, default="./FamNet/data/pretrainedModels/FamNet_Save.pth", help="path to trained model")
 parser.add_argument("-a",  "--adapt", action='store_true', help="If specified, perform test time adaptation")
 parser.add_argument("-gs", "--gradient_steps", type=int,default=100, help="number of gradient steps for the adaptation")
 parser.add_argument("-lr", "--learning_rate", type=float,default=1e-7, help="learning rate for adaptation")
@@ -28,7 +29,6 @@ parser.add_argument("-g",  "--gpu-id", type=int, default=-1, help="GPU id. Defau
 args = parser.parse_args()
 
 data_path = args.data_path
-print(data_path)
 anno_file = data_path + 'annotation_FSC147_384.json'
 data_split_file = data_path + 'Train_Test_Val_FSC_147.json'
 im_dir = data_path + 'images_384_VarV2'
@@ -59,6 +59,8 @@ with open(data_split_file) as f:
 cnt = 0
 SAE = 0 #линейная сумма ошибки
 SSE = 0 #квадратичная сумма ошибки
+SMAPE = 0 #относительная ошибка
+MAPE = 0
 
 print("Evaluation on {} data".format(args.test_split))
 im_ids = data_split[args.test_split]
@@ -74,14 +76,15 @@ for im_id in pbar:
         x2, y2 = bbox[2][0], bbox[2][1]
         rects.append([y1, x1, y2, x2])
 
-    """image = Image.open('{}/{}'.format(im_dir, im_id))
-    image.load()"""
+    image = Image.open('{}/{}'.format(im_dir, im_id))
 
-    image = cv2.imread('{}/{}'.format(im_dir, im_id))
-    """image = grabcut(image)
-    image = Image.fromarray(image)"""
+    """image = cv2.imread('{}/{}'.format(im_dir, im_id))
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    #image = sam_test(image, abs(rects[0][2] - rects[0][0]), abs(rects[0][3] - rects[0][1]))
     image = grabcut(image)
-    image = Image.fromarray((image * 255).astype(np.uint8))
+    
+    image = Image.fromarray(image)"""
 
     sample = {'image': image, 'lines_boxes': rects}
     sample = Transform(sample)
@@ -109,7 +112,7 @@ for im_id in pbar:
             if torch.is_tensor(Loss):
                 Loss.backward()
                 optimizer.step()
-        features.required_grad = False
+        features.requires_grad = False
         output = adapted_regressor(features)
 
     gt_cnt = dots.shape[0]
@@ -118,9 +121,11 @@ for im_id in pbar:
     err = abs(gt_cnt - pred_cnt)
     SAE += err
     SSE += err**2
+    SMAPE += 2*(err)/(abs(pred_cnt) + abs(gt_cnt))
+    MAPE += (err)/(gt_cnt)
 
-    pbar.set_description('{:<8}: actual-predicted: {:6d}, {:6.1f}, error: {:6.1f}. Current MAE: {:5.2f}, RMSE: {:5.2f}'.\
-                         format(im_id, gt_cnt, pred_cnt, abs(pred_cnt - gt_cnt), SAE/cnt, (SSE/cnt)**0.5))
+    pbar.set_description('{:<8}: pred: {:6d}, {:6.1f}, error: {:6.1f}. Current MAE: {:5.2f}, RMSE: {:5.2f}, MAPE: {:5.2f}, SMAPE: {:5.2f}'.\
+                         format(im_id, gt_cnt, pred_cnt, abs(pred_cnt - gt_cnt), SAE/cnt, (SSE/cnt)**0.5, MAPE/cnt, SMAPE/cnt))
     print("")
 
 print('On {} data, MAE: {:6.2f}, RMSE: {:6.2f}'.format(args.test_split, SAE/cnt, (SSE/cnt)**0.5))

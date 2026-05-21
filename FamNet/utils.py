@@ -59,6 +59,7 @@ def PerturbationLoss(output,boxes,sigma=8, use_gpu=True):
     """
     Сравнивает предсказанную плотность в областях примеров с идеальным Гауссовым ядром 
     """
+    device = output.device
     Loss = 0.
     if boxes.shape[1] > 1:
         boxes = boxes.squeeze()
@@ -71,7 +72,7 @@ def PerturbationLoss(output,boxes,sigma=8, use_gpu=True):
             GaussKernel = matlab_style_gauss2D(shape=(out.shape[2],out.shape[3]),sigma=sigma)
             GaussKernel = torch.from_numpy(GaussKernel).float()
             if use_gpu and torch.cuda.is_available():
-                GaussKernel = GaussKernel.cuda()
+                GaussKernel = GaussKernel.to(device)
             Loss += F.mse_loss(out.squeeze(),GaussKernel)
     else:
         boxes = boxes.squeeze()
@@ -83,7 +84,7 @@ def PerturbationLoss(output,boxes,sigma=8, use_gpu=True):
         Gauss = matlab_style_gauss2D(shape=(out.shape[2],out.shape[3]),sigma=sigma)
         GaussKernel = torch.from_numpy(Gauss).float()
         if use_gpu and torch.cuda.is_available():
-                GaussKernel = GaussKernel.cuda()
+                GaussKernel = GaussKernel.to(device)
         Loss += F.mse_loss(out.squeeze(),GaussKernel) 
     return Loss
 
@@ -93,11 +94,24 @@ def MincountLoss(output, boxes, use_gpu=True):
     между текущей суммой и единицей.
     Гарантирует, что каждый пример засчитывается как минимум за один объект
     """
-    ones = torch.ones(1)
-    if torch.cuda.is_available() and use_gpu:
-        ones = ones.cuda()
+    device = output.device
+    ones = torch.tensor(1.0, device=device, dtype=output.dtype)
     Loss = 0.
-    if boxes.shape[1] > 1:
+
+    boxes = boxes.squeeze()
+    if boxes.dim() == 1: 
+        boxes = boxes.unsqueeze(0)
+    
+    # Тензорные индексы без синхронизации с CPU
+    y1, x1, y2, x2 = boxes[:, 1].long(), boxes[:, 2].long(), boxes[:, 3].long(), boxes[:, 4].long()
+
+    for i in range(len(boxes)):
+        X = output[..., y1[i]:y2[i], x1[i]:x2[i]].sum()
+        # Штрафуем за любое отклонение от 1.0 в обе стороны
+        Loss += F.mse_loss(X, ones)
+            
+    return Loss
+    """if boxes.shape[1] > 1:
         boxes = boxes.squeeze()
         for tempBoxes in boxes.squeeze():
             y1 = int(tempBoxes[1])
@@ -105,7 +119,7 @@ def MincountLoss(output, boxes, use_gpu=True):
             x1 = int(tempBoxes[2])
             x2 = int(tempBoxes[4])
             X = output[:,:,y1:y2,x1:x2].sum()
-            if X.item() <= 1:
+            if X <= 1:
                 Loss += F.mse_loss(X,ones)
     else:
         boxes = boxes.squeeze()
@@ -114,9 +128,9 @@ def MincountLoss(output, boxes, use_gpu=True):
         x1 = int(boxes[2])
         x2 = int(boxes[4])
         X = output[:,:,y1:y2,x1:x2].sum()
-        if X.item() <= 1:
+        if X <= 1:
             Loss += F.mse_loss(X,ones)  
-    return Loss
+    return Loss"""
 
 def pad_to_size(feat, desire_h, desire_w):
     """Добавляет нулевые отступы (padding) к тензору признаков (N, C, H, W)"""
@@ -131,32 +145,18 @@ def pad_to_size(feat, desire_h, desire_w):
 
     return F.pad(feat, (left_pad, right_pad, top_pad, bottom_pad))
 
-def extract_features(feature_model, image, boxes, feat_map_keys=['map3','map4'], exemplar_scales=[0.9, 1.1]):
+def extract_features(feature_model, image, boxes,feat_map_keys=['map3','map4'], exemplar_scales=[0.9, 1.1]):
     """
     Извлекает признаки из объектов через ResNet, делает свёртку
     с каждым признаком в качестве ядра и позвращает многоканальную карту сходства
     """
     N, M = image.shape[0], boxes.shape[2]
     Image_features = feature_model(image)
-
-    feat = Image_features['map2'][0]
-
-    # Усредняем все каналы
-    feat_mean = torch.mean(feat, dim=0).cpu().numpy() 
-    feat_min = feat_mean.min()
-    feat_max = feat_mean.max()
-    if feat_max > feat_min:
-        feat_norm = (feat_mean - feat_min) / (feat_max - feat_min)
-    else:
-        feat_norm = feat_mean
-
-    #feat_viz = (feat_norm * 255).astype(np.uint8)
-    #feat_viz = cv2.resize(feat_viz, (48*8, 72*8), interpolation=cv2.INTER_LINEAR)
-
     for ix in range(0,N):
-        #boxes = boxes.squeeze(0)
-        curr_boxes = boxes[ix][0]
+        # boxes = boxes.squeeze(0)
+        boxes = boxes[ix][0]
         cnter = 0
+        Cnter1 = 0
         for keys in feat_map_keys:
             image_features = Image_features[keys][ix].unsqueeze(0)
             if keys == 'map1' or keys == 'map2':
@@ -167,12 +167,12 @@ def extract_features(feature_model, image, boxes, feat_map_keys=['map3','map4'],
                 Scaling =  16.0
             else:
                 Scaling = 32.0
-            boxes_scaled = curr_boxes / Scaling
+            boxes_scaled = boxes / Scaling
             boxes_scaled[:, 1:3] = torch.floor(boxes_scaled[:, 1:3])
             boxes_scaled[:, 3:5] = torch.ceil(boxes_scaled[:, 3:5])
-            boxes_scaled[:, 3:5] = boxes_scaled[:, 3:5] + 1
+            boxes_scaled[:, 3:5] = boxes_scaled[:, 3:5] + 1 # make the end indices exclusive 
             feat_h, feat_w = image_features.shape[-2], image_features.shape[-1]
-
+            # make sure exemplars don't go out of bound
             boxes_scaled[:, 1:3] = torch.clamp_min(boxes_scaled[:, 1:3], 0)
             boxes_scaled[:, 3] = torch.clamp_max(boxes_scaled[:, 3], feat_h)
             boxes_scaled[:, 4] = torch.clamp_max(boxes_scaled[:, 4], feat_w)            
@@ -187,26 +187,25 @@ def extract_features(feature_model, image, boxes, feat_map_keys=['map3','map4'],
                 if j == 0:
                     examples_features = image_features[:,:,y1:y2, x1:x2]
                     if examples_features.shape[2] != max_h or examples_features.shape[3] != max_w:
-
+                        #examples_features = pad_to_size(examples_features, max_h, max_w)
                         examples_features = F.interpolate(examples_features, size=(max_h,max_w),mode='bilinear')                    
                 else:
                     feat = image_features[:,:,y1:y2, x1:x2]
                     if feat.shape[2] != max_h or feat.shape[3] != max_w:
                         feat = F.interpolate(feat, size=(max_h,max_w),mode='bilinear')
-
+                        #feat = pad_to_size(feat, max_h, max_w)
                     examples_features = torch.cat((examples_features,feat),dim=0)
-
             h, w = examples_features.shape[2], examples_features.shape[3]
             features =    F.conv2d(
                     F.pad(image_features, ((int(w/2)), int((w-1)/2), int(h/2), int((h-1)/2))),
                     examples_features
                 )
             combined = features.permute([1,0,2,3])
-
+            # computing features for scales 0.9 and 1.1 
             for scale in exemplar_scales:
                     h1 = math.ceil(h * scale)
                     w1 = math.ceil(w * scale)
-                    if h1 < 1:
+                    if h1 < 1: # use original size if scaled size is too small
                         h1 = h
                     if w1 < 1:
                         w1 = w
@@ -228,10 +227,9 @@ def extract_features(feature_model, image, boxes, feat_map_keys=['map3','map4'],
             All_feat = torch.cat((All_feat,Combined.unsqueeze(0)),dim=0)
     return All_feat
 
-
 class resizeImage(object):
     """Изменяет размер изображения и координат боксов-примеров для тестирования"""
-    
+
     def __init__(self, MAX_HW=1504):
         self.max_hw = MAX_HW
 

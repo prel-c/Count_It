@@ -5,15 +5,15 @@ def get_argparser():
 
     parser = argparse.ArgumentParser("LOCA parser", add_help=False)
 
-    parser.add_argument('--model_name', default='loca_3_shot', type=str)
+    parser.add_argument('--model_name', default='loca_few_shot', type=str)
     parser.add_argument(
         '--data_path',
-        default='/home/nikola/master-thesis/data/fsc147/',
+        default='FamNet/data',
         type=str
     )
     parser.add_argument(
         '--model_path',
-        default='/home/nikola/master-thesis/models/pretrained/',
+        default='loca/models',
         type=str
     )
     parser.add_argument('--backbone', default='resnet50', type=str)

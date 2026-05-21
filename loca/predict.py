@@ -5,8 +5,8 @@ import matplotlib.pyplot as plt
 from torchvision import transforms
 from models.loca import build_model
 
-IMG_PATH = "D:/mygit/opd/ResNet/images/473.jpg"
-MODEL_PATH = "models/loca_few_shot.pt"
+IMG_PATH = "FamNet/data/images_384_VarV2/5.jpg"
+MODEL_PATH = "Loca/models/loca_few_shot.pt"
 ZERO_SHOT = False 
 
 def run_prediction():
@@ -79,12 +79,12 @@ def run_prediction():
         plt.gca().add_patch(plt.Rectangle((box[0], box[1]), box[2]-box[0], box[3]-box[1], 
                                           edgecolor='red', facecolor='none', lw=2))
     plt.title("")
-    plt.gca().set_box_aspect(1)
+
     plt.axis('off')
     plt.subplot(1, 2, 2)
     plt.imshow(density_map, cmap='jet', extent=[0, w, h, 0])
     plt.title(f"Результат {count:.2f})")
-    plt.gca().set_box_aspect(1)
+
     plt.colorbar(fraction=0.046, pad=0.04)
     plt.axis('off')
     plt.show()

@@ -16,7 +16,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-i", "--input-image", type=str, required=True, help="/Path/to/input/image/file/")
 parser.add_argument("-b", "--bbox-file", type=str, help="/Path/to/file/of/bounding/boxes")
 parser.add_argument("-o", "--output-dir", type=str, default=".", help="/Path/to/output/image/file")
-parser.add_argument("-m",  "--model_path", type=str, default="./data/pretrainedModels/FamNet_Save1.pth", help="path to trained model")
+parser.add_argument("-m",  "--model_path", type=str, default="./data/pretrainedModels/FamNet_Save.pth", help="path to trained model")
 parser.add_argument("-g",  "--gpu-id", type=int, default=0, help="GPU id. Default 0 for the first GPU. Use -1 for CPU.")
 
 parser.add_argument("-a",  "--adapt", action='store_true', help="If specified, perform test time adaptation")
@@ -28,11 +28,13 @@ parser.add_argument("-wp", "--weight_perturbation", type=float,default=1e-4, hel
 
 args = parser.parse_args()
 
+device = torch.device('xpu' if torch.xpu.is_available() else "cpu")
 
-if not torch.cuda.is_available() or args.gpu_id < 0:
+if not torch.xpu.is_available() or args.gpu_id < 0:
     use_gpu = False
     print("===> Using CPU mode.")
 else:
+    print("===> Using XPU mode.")
     use_gpu = True
     os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
     os.environ["CUDA_VISIBLE_DEVICES"] = str(args.gpu_id)
@@ -41,18 +43,12 @@ else:
 resnet50_conv = Resnet50FPN()
 regressor = CountRegressor(6, pool='mean')
 
-
-if use_gpu:
-    resnet50_conv.cuda()
-    regressor.cuda()
-    regressor.load_state_dict(torch.load(args.model_path))
-else:
-    regressor.load_state_dict(torch.load(args.model_path, map_location=torch.device('cpu')))
-
+regressor.load_state_dict(torch.load(args.model_path, map_location=torch.device('cpu')))
+resnet50_conv.to(device)
+regressor.to(device)
 
 resnet50_conv.eval()
 regressor.eval()
-
 
 image_name = os.path.basename(args.input_image)
 image_name = os.path.splitext(image_name)[0]
@@ -100,8 +96,8 @@ sample = Transform(sample)
 image, boxes = sample['image'], sample['boxes']
 
 if use_gpu:
-    image = image.cuda()
-    boxes = boxes.cuda()
+    image = image.to(device)
+    boxes = boxes.to(device)
 
 
 with torch.no_grad():
@@ -137,7 +133,7 @@ else:
 
 print('===> The predicted count is: {:6.2f}'.format(output.sum().item()))
 
-#np.save('density_map_result.npy', output)
+np.save('density_map_result.npy', output.cpu().detach().numpy())
 
 rslt_file = "{}/{}_out.png".format(args.output_dir, image_name)
 visualize_output_and_save(image.detach().cpu(), output.detach().cpu(), boxes.cpu(), rslt_file)

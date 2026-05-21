@@ -4,53 +4,46 @@ import matplotlib.pyplot as plt
 import cv2
 
 
-def otsu(filename: str, sigma: float) -> np.ndarray | None:
-    def crop(image_name: str) -> np.ndarray | None:
-        img2crop = cv2.imread(image_name)
-        if img2crop is None:
-            return None
-        roi = cv2.selectROI("Select Area", img2crop, fromCenter=False, showCrosshair=True)
-        x, y, w, h = map(int, roi)
-        cv2.destroyAllWindows()
-        img2crop = cv2.cvtColor(img2crop, cv2.COLOR_BGR2RGB)
-        cropped_img = img2crop[y:y + h, x:x + w]
-        return cropped_img
+def otsu(image: np.ndarray, sigma: float) -> np.ndarray | None:
 
-    image = crop(filename).astype(np.float64) / 255.0
+    image = image.astype(np.float64) / 255.0
     image_gray = sk.color.rgb2gray(image)
     image_blurred = sk.filters.gaussian(image_gray, sigma=sigma)
     thresh = sk.filters.threshold_otsu(image_blurred)
     binary = image_blurred > thresh
-    mask = np.expand_dims(binary, 2)
-    segmented = image * (np.ones(mask.shape) - mask)
+
+    mask = (~binary).astype(np.float32)
+
+    mask = cv2.GaussianBlur(mask, (11, 11), 0)
+
+    mask = np.expand_dims(mask, axis=2)
+
+    segmented = image * mask
+    segmented = np.clip(segmented * 255, 0, 255).astype(np.uint8)
+    #segmented = image * (~binary)[:, :, np.newaxis]
     # Uncomment to test:
 
-    fig, ax = plt.subplots(1, 3, figsize=(10, 5))
+    """fig, ax = plt.subplots(1, 3, figsize=(10, 5))
 
     ax[0].imshow(image)
     ax[0].set_title("Original image")
     ax[0].axis("off")
 
-    ax[1].imshow(binary.astype(np.float64), cmap="gray")
+    ax[1].imshow(binary, cmap="gray")
     ax[1].set_title("Otsu")
     ax[1].axis("off")
 
-    ax[2].imshow(segmented.astype(np.float64))
+    ax[2].imshow(segmented)
     ax[2].set_title("Segmented")
     ax[2].axis("off")
 
     plt.tight_layout()
-    plt.show()
+    plt.show()"""
 
     return segmented
 
+if __name__ == "__main__":
 
-test_image = otsu("D:/mygit/opd/ResNet/images/image copy 4.png", 2)
+    test_image = otsu(cv2.imread("D:/mygit/opd/FamNet/data/images_384_VarV2/312.jpg"), 2)
 
-
-if test_image.dtype != np.uint8:
-    test_image = (test_image * 255).astype(np.uint8)  # если значения в [0,1]
-    # или
-    test_image = test_image.astype(np.uint8)  # если значения уже 0-255
-
-cv2.imwrite("D:/mygit/opd/ResNet/images/image copy 22.png", test_image)
+    cv2.imwrite("image.png", test_image)

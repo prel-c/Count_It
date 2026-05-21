@@ -1,14 +1,15 @@
 import torch.nn as nn
-from FamNet.model import  Resnet50FPN,CountRegressor,weights_normal_init
-from utils import MAPS, Scales, Transform,TransformTrain,extract_features, visualize_output_and_save
+from model import  Resnet50FPN, CountRegressor, weights_normal_init
+from utils import MAPS, Scales, Transform, TransformTrain, extract_features, visualize_output_and_save
 from PIL import Image
 import os
 import torch
+from torch.utils.data import Dataset, DataLoader
 import argparse
 import json
 import numpy as np
 from tqdm import tqdm
-from os.path import exists,join
+from os.path import exists, join
 import random
 import torch.optim as optim
 import torch.nn.functional as F
@@ -34,7 +35,7 @@ gt_dir = data_path + 'gt_density_map_adaptive_384_VarV2'
 if not exists(args.output_dir):
     os.mkdir(args.output_dir)
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+device = torch.device('xpu' if torch.xpu.is_available() else 'cpu')
 print(f"Using device: {device}")
 
 #os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
@@ -115,13 +116,13 @@ def train():
         loss = criterion(output, gt_density)
         loss.backward()
         optimizer.step()
-        train_loss += loss.item()
+        train_loss += loss.item()   
         pred_cnt = torch.sum(output).item()
         gt_cnt = torch.sum(gt_density).item()
         cnt_err = abs(pred_cnt - gt_cnt)
         train_mae += cnt_err
         train_rmse += cnt_err ** 2
-        pbar.set_description('actual-predicted: {:6.1f}, {:6.1f}, error: {:6.1f}. Current MAE: {:5.2f}, RMSE: {:5.2f} Best VAL MAE: {:5.2f}, RMSE: {:5.2f}'.format( gt_cnt, pred_cnt, abs(pred_cnt - gt_cnt), train_mae/cnt, (train_rmse/cnt)**0.5,best_mae, best_rmse))
+        pbar.set_description('actual-predicted: {:6.1f}, {:6.1f}, error: {:6.1f}. Current MAE: {:5.2f}, RMSE: {:5.2f} Best VAL MAE: {:3.1f}, RMSE: {:3.1f}'.format( gt_cnt, pred_cnt, abs(pred_cnt - gt_cnt), train_mae/cnt, (train_rmse/cnt)**0.5,best_mae, best_rmse))
         print("")
     train_loss = train_loss / len(im_ids)
     train_mae = (train_mae / len(im_ids))
@@ -178,7 +179,7 @@ def eval():
     return SAE/cnt, (SSE/cnt)**0.5
 
 
-best_mae, best_rmse = 1e7, 1e7
+best_mae, best_rmse = 1e5, 1e5
 stats = list()
 for epoch in range(0,args.epochs):
     regressor.train()
@@ -193,7 +194,7 @@ for epoch in range(0,args.epochs):
     if best_mae >= val_mae:
         best_mae = val_mae
         best_rmse = val_rmse
-        model_name = args.output_dir + '/' + "FamNet.pth"
+        model_name = args.output_dir + '/' + "FamNet1.pth"
         torch.save(regressor.state_dict(), model_name)
 
     print("Epoch {}, Avg. Epoch Loss: {} Train MAE: {} Train RMSE: {} Val MAE: {} Val RMSE: {} Best Val MAE: {} Best Val RMSE: {} ".format(
