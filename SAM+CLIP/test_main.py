@@ -10,8 +10,6 @@ import matplotlib.pyplot as plt
 from colorama import Fore, Style
 from pipeline import *
 
-#если у вас не установленны какие-то библиотеки, то запустите
-#pip install opencv-python torch tqdm pandas numpy matplotlib colorama pillow
 
 
 def test(device, data_path, names_images, row_colors):

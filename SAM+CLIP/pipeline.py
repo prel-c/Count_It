@@ -32,7 +32,7 @@ min_mask_region_area=500
 )
 
 
-# 2. Utils
+# 2 Utils
 
 def resize_image(image, max_size=MAX_IMAGE_SIZE):
     h, w = image.shape[:2]
