@@ -13,4 +13,6 @@ FamNet/images/
 FamNet/logsSave/
 FamNet/__pycache__/
 FamNet/.vscode/
+Segmentation/SAM/data/sam_vit_b_01ec64.pth
+Segmentation/SAM/__pycache__
 .vscode
