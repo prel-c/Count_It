@@ -1,313 +1,198 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
 
-"""
-____________________________________________________
-
-Функции реализации метода LBP
-____________________________________________________
-
-"""
-
-def LBP(i, j, photo):
+def test(image_BGR, template_box):
     """
-    Функция поиска локального бинарного шаблона (LBP) и перевод его в десятичную систему
-
-    Ввод - координаты пикселя и матрица ч/б изображения
-    Вывод - число в десятичной системе, соответсвующее LBP
-
+    Ввод - BGR изображение, бокс шаблона
+    Вывод - Количество найденных объектов и изображение с нарисованными боксами вокруг найденных объектов
     """
-    st=[]
-    lbp=0
-    px = [(i-1, j),
-          (i-1, j+1),
-          (i, j+1),
-          (i+1, j+1),
-          (i+1, j),
-          (i+1, j-1),
-          (i, j-1),
-          (i-1, j-1)]
+    def LBP(img):
 
-    if 0<i<len(photo)-1 and 0<j<len(photo[0])-1:
-        for i1, j1 in px:
-            if photo[i1, j1]>photo[i, j]:
-                st.append(1)
-            else:
-                st.append(0)
-        for i in range (len(st)):
-            lbp+=st[i]*2**(len(st)-1-i)
-        return(lbp)
-    else:
-        return 0
+        """
+        Функция поиска локального бинарного шаблона (LBP) и перевод его в десятичную систему
 
-def LBP_Matrix(photo):
-    """
-    Функция для создания матрицы из LBP
+        Ввод - матрица ч/б изображения
+        Вывод - матрица из LBP чисел
 
-    Ввод - матрица ч/б изображения
-    Вывод - матрица из LBP
+        """
 
-    """
-    LBP_img=np.full((len(photo), len(photo[0])), np.nan)
-    for i in range (1, len(photo)-1):
-        for j in range (1, len(photo[0])-1):
-            LBP_img[i, j]=LBP(i, j, photo)
-    return LBP_img
+        h, w=img.shape                                                              # Получаем размер изображения
+        lbp_image=np.zeros((h, w), dtype=np.uint8)                                  # Создаём матрицу для заполнения LBP числами
+        img_new_size=np.pad(img, 1, mode='constant')                                # Увеличиваем матрицу до размеров i+2, j+2
 
-def LBP_Ghist(LBP_img):
-    """
-    Функция для создания гистограммы из матрицы LBP
+        neighbors=[                                                                 # Создаём матрицы такого же размера как и img, но сдвинутые в ту сторону относительно которой мы сравниваем
+            img_new_size[:-2, 1:-1],                                                    # север      
+            img_new_size[:-2, 2:],                                                      # северо-восток
+            img_new_size[1:-1, 2:],                                                     # восток
+            img_new_size[2:, 2:],                                                       # юго-восток
+            img_new_size[2:, 1:-1],                                                     # юг
+            img_new_size[2:, :-2],                                                      # юго-запад
+            img_new_size[1:-1, :-2],                                                    # запад
+            img_new_size[:-2, :-2]]                                                     # северо-запад          
 
-    Ввод - LBP матрица
-    Вывод - Список размером 256 позиций. 
-            В каждой позиции записано количество всех чисел соответсвующих позиции в списке.
+        for i, n in enumerate(neighbors):                                           # Векторизованное сравнение
+            lbp_image+=(n>img).astype(np.uint8)<<i            
 
-    """
-    ghistogramm=np.zeros(256)
-    for i in range(256):
-        ghistogramm[i]=np.count_nonzero(LBP_img == i)
-    return ghistogramm
+        return lbp_image[1:-1, 1:-1]                                                # Возвращаем матрицу из LBP чисел, обрезанную до размера исходного изображения 
 
-def LBP_Ghist_normalization(ghistogramm):
-    """
-    Функция нормализации гистограммы.
+    def LBP_hist(lbp):
+        """
+        Функция для создания гистограммы из матрицы LBP
 
-    Ввод - Список 256 позиций (гистограмма)
-    Вывод - Нормализованный список 256 позиций (гистограмма)
+        Ввод - LBP матрица
+        Вывод - Список размером 256 позиций. 
+                В каждой позиции записано количество всех чисел соответсвующих позиции в списке.
 
-    """
-    return ghistogramm/np.sum(ghistogramm)
-
-def chi_square(hist1, hist2, epsilon=1e-10):
-
-    """
-    Функция проверки связи между гистограммами.
-
-    Ввод - два списока на 256 позиций (гистограммы)
-    Вывод - Истина/ Ложь
-
-    """
-    chi_square=np.sum((hist1 - hist2) ** 2 / (hist1 + hist2 + epsilon))
-    if chi_square < 0.5:
-        return True
-    else:
-        return False
-
-
-
-"""
-____________________________________________________
-
-Остальные функции
-____________________________________________________
-
-"""
-
-def template_search(image, template):
-
-    """
-    Функция реализации шаблонного поиска
-
-    Ввод - Матрица, соответсвующая ч/б изображению
-    Вывод - Массив с координатами прямоугольников, соответсвующие потенциальным областям с объектом.
-            Число таких областей
-
-    """                      
-
-    w, h = template.shape[::-1]
-
-    result = cv2.matchTemplate(image, template, cv2.TM_CCOEFF_NORMED)
-    threshold = 0.5
-    locations = np.where(result >= threshold)
-    count = 0
-    rectangles = []
-
-    for pt in zip(*locations[::-1]):
-        rectangles.append([pt[0], pt[1], w, h])
-
-    rectangles = merge_duplicate_rectangles(rectangles, threshold=0.1)
-    count=len(rectangles)
-    return rectangles, count
-
-def drawing_rec(image, rectangles):
-
-    """
-    Функция рисования прямоугольников
-
-    Ввод - Матрица, соответсвующая цветному изображению и координаты прямоугольников
-    Вывод - Матрица, соответсвующая цветному изображению с нарисованными прямоугольниками
-
-    """  
-
-    for (x, y, w, h) in rectangles:
-        cv2.rectangle(image, (x,y), (x+w,y+h), 150, 2)
-    return image
-
-def cheking(image, rectangle, ghist1):
-
-    """
-    Функция проверки методом LBP областей найденных с помощью шаблонного поиска
-
-    Ввод - Матрица, соответсвующая ч/б изображению, координаты прямоугольника, гистограмма шаблона
-    Вывод - Истина/Ложь
-
-    """  
+        """                                        
+        hist=np.bincount(lbp.ravel(), minlength=256)                                # Преобразуем массив в строку и считаем сколько раз повторяется каждый элемент значением от 0 до 255
+        return hist/(hist.sum()+1e-10)                                              # Возвращаем L1 нормализованную гистограмму
     
-    x=rectangle[0]
-    y=rectangle[1]
-    w=rectangle[2]
-    h=rectangle[3]
-    img=image[y:y+h, x:x+w]
-    img=LBP_Matrix(img)
-    ghist=LBP_Ghist_normalization(LBP_Ghist(img))
-    if chi_square(ghist, ghist1, epsilon=1e-10) is True:
-        return True
-    else:
-        return False
+    def Sobel(img):
+        """
+        Функция применения ядра собеля к ч/б изображению
 
-def merge_duplicate_rectangles(rectangles, threshold=0.1):
+        Ввод - Матрица, соответсвующая ч/б изображению
+        Вывод - Матрица, содержащая в себе магнитуду каждого пикселя
 
+        """ 
+        h, w=img.shape
+        Gx=np.array([[-1, 0, 1],                                                    # Создаём ядра собеля
+                     [-2, 0, 2], 
+                     [-1, 0, 1]], 
+                     dtype=np.float32)
+        
+        Gy=np.array([[-1, -2, -1], 
+                     [0, 0, 0], 
+                     [1, 2, 1]], 
+                     dtype=np.float32)
+        
+        img_new_size=np.pad(img, 1, mode='constant')                                # Увеличиваем матрицу до размеров i+2, j+2
+        gx=(Gx[0,0]*img_new_size[0:h, 0:w]+                                             #-1*северо-запад
+            Gx[0,2]*img_new_size[0:h, 2:w+2]+                                           # 1*северо-восток
+            Gx[1,0]*img_new_size[1:h+1, 0:w]+                                           #-2*запад
+            Gx[1,2]*img_new_size[1:h+1, 2:w+2]+                                         # 2*восток
+            Gx[2,0]*img_new_size[2:h+2, 0:w]+                                           #-1*юго-запад
+            Gx[2,2]*img_new_size[2:h+2, 2:w+2])                                         # 1*юго-восток
+
+        gy=(Gy[0,0]*img_new_size[0:h, 0:w]+                                             #-1*северо-запад
+            Gy[0,1]*img_new_size[0:h, 1:w+1]+                                           #-2*север
+            Gy[0,2]*img_new_size[0:h, 2:w+2]+                                           #-1*северо-восток
+            Gy[2,0]*img_new_size[2:h+2, 0:w]+                                           # 1*юго-запад
+            Gy[2,1]*img_new_size[2:h+2, 1:w+1]+                                         #-1*юг
+            Gy[2,2]*img_new_size[2:h+2, 2:w+2])                                         # 1*юго-восток      
+
+        magnitude=np.sqrt(gx**2 + gy**2)                                            # Считаем магнитуду
+        magnitude=(magnitude/(magnitude.max()+1e-10))*255                           # Нормализуем по максимальному значению
+        return magnitude.astype(np.uint8)
+    
+    def template_search(magnitude_im, magnitude_te):
+        """
+        Функция реализации шаблонного поиска
+
+        Ввод - Матрица, соответсвующая ч/б изображению
+        Вывод - Массив с координатами прямоугольников, 
+                соответсвующими потенциальным областям с объектом.
+
+        """                      
+        all_rectangles=[]
+        h_im, w_im=magnitude_im.shape                                               # Высота и ширина магнитуды изображения
+        h_te, w_te=magnitude_te.shape                                               # Высота и ширина магнитуды шаблона
+        
+        scales=np.linspace(0.5, 1.2, 10)
+        
+        for scale in scales:                                                        # scales - список масштабов для поиска
+            w_te_new=max(10, int(w_te*scale))                                       # Поиск масштабированной ширины, но не менее 10 пикселей (менее 10 пикселей приводит к поломке)
+            h_te_new=max(10, int(h_te*scale))                                       # Поиск масштабированной высоты, но не менее 10 пикселей (менее 10 пикселей приводит к поломке)
+            
+            if w_te_new>w_im or h_te_new>h_im:                                      # Проверка не стал ли шаблон больше изображения
+                continue
+                
+            te_new=cv2.resize(magnitude_te, (w_te_new, h_te_new))                   # Масштабирование шаблона до нового размера
+            result=cv2.matchTemplate(magnitude_im, te_new, cv2.TM_CCOEFF_NORMED)    # Шаблонный поиск
+            
+            ys, xs=np.where(result>=0.3)                                            # Позиции с удовлетворяющим сходством 
+            
+            for x, y in zip(xs, ys):                                                # Сохраняем все позиции с удовлетворяющим результатом
+                all_rectangles.append([x, y, w_te_new, h_te_new])
+        
+        return all_rectangles
+    
+    def NMS(rectangles):
+        """
+        Функция удаления прямоугольников, дублирующих существующий
+
+        Ввод - массив с набором координат прямоугольников
+        Вывод - масив с набором координат "уникальных" прямоугольников
+
+        """ 
+        if len(rectangles)<=1:
+            return rectangles
+
+        rectangles_np=np.array(rectangles, dtype=np.float32)
+
+        x1=rectangles_np[:, 0]                                                      # Получаем левую нижнюю координату по оси x
+        y1=rectangles_np[:, 1]                                                      # Получаем левую нижнюю координату по оси y
+        x2=rectangles_np[:, 0]+rectangles_np[:, 2]                                  # Получаем правую верхнюю координату по оси x                                     
+        y2=rectangles_np[:, 1]+rectangles_np[:, 3]                                  # Получаем правую верхнюю координату по оси y
+        
+        areas=(x2-x1)*(y2-y1)                                                       # Находим площадь каждого прямоугольника
+        idxs=np.argsort(areas)[::-1]                                                # Создаём массив с индексами отсортированных площадей по убыванию
+        
+        keep=[]                                                                     # Массив для сохранения нужных прямоугольников
+        while len(idxs)>0:
+            i=idxs[0]                                                               # Сохраняем индекс прямоугольника с наибольшей площадью
+            keep.append(rectangles[i])                                              # Сохраняем прямоугольник с наибольшей площадью
+            
+            if len(idxs)==1:
+                break
+
+            xx1=np.maximum(x1[i], x1[idxs[1:]])                                     # Находим координату левого нижнего угла пересечения прямоугольников по оси x
+            yy1=np.maximum(y1[i], y1[idxs[1:]])                                     # Находим координату левого нижнего угла пересечения прямоугольников по оси y
+            xx2=np.minimum(x2[i], x2[idxs[1:]])                                     # Находим координату правого верхнего угла пересечения прямоугольников по оси x
+            yy2=np.minimum(y2[i], y2[idxs[1:]])                                     # Находим координату правого верхнего угла пересечения прямоугольников по оси y
+            
+            w=np.maximum(0, xx2-xx1)                                                # Вычисляем ширину области пересечения
+            h=np.maximum(0, yy2-yy1)                                                # Вычисляем высоту области пересечения
+            S=w*h                                                                   # Ищем площадь пересечения
+            iou=S/(areas[i]+areas[idxs[1:]]-S)                                      # Считаем долю, которую составляет площадь перекрытия относительно общей площади,\n
+                                                                                    # занимаемой двумя прямоугольниками
+            
+            idxs=idxs[1:][iou<0.1]                                                  # Оставляем слабопересекающиеся прямоугольники                       
+
+        return keep
+    
+    
     """
-    Функция удаления прямоугольников, дублирующих существующий
-
-    Ввод - массив с набором координат прямоугольников
-    Вывод - масив с набором координат "уникальных" прямоугольников
-
-    """ 
-
-    if len(rectangles) <= 1:
-        return rectangles
-    borders = []
-    for (x, y, w, h) in rectangles:
-        borders.append([x, y, x + w, y + h])
-    borders = np.array(borders)
-    S = (borders[:, 2] - borders[:, 0]) * (borders[:, 3] - borders[:, 1])
-    S_sorted = np.argsort(S)[::-1]
-
-    keep = []
-    while len(S_sorted) > 0:
-        current = S_sorted[0]
-        keep.append(rectangles[current])
-        if len(S_sorted) == 1:
-            break
-
-        remaining = S_sorted[1:]
-        
-        x1 = np.maximum(borders[current, 0], borders[remaining, 0])
-        y1 = np.maximum(borders[current, 1], borders[remaining, 1])
-        x2 = np.minimum(borders[current, 2], borders[remaining, 2])
-        y2 = np.minimum(borders[current, 3], borders[remaining, 3])
-        
-        intersection = np.maximum(0, x2 - x1) * np.maximum(0, y2 - y1)
-        
-        area_current = S[current]
-        area_remaining = S[remaining]
-        iou = intersection / (area_current + area_remaining - intersection)
-        
-        S_sorted = remaining[iou < threshold]
-    
-    return keep
-
-"""
-____________________________________________________
-
-Функции предобработки изображения
-____________________________________________________
-
-"""
-def sobel(image):
-
+    Пайплайн обработки
     """
-    Функция применения ядра собеля к ч/б изображению
+    image=cv2.cvtColor(image_BGR, cv2.COLOR_BGR2GRAY)
+    image_bgr=image_BGR.copy()
+    x1, y1, x2, y2=template_box[0][0], template_box[0][1], template_box[1][0], template_box[1][1]
+    template=image[y2:y1, x2:x1]
 
-    Ввод - Матрица, соответсвующая ч/б изображению
-    Вывод - Матрица, содержащая в себе магнитуду каждого пикселя
-
-    """ 
-
-    Gx = np.array([[-1, 0, 1],
-                   [-2, 0, 2],
-                   [-1, 0, 1]])
+    image_blur=cv2.GaussianBlur(image, (5, 5), 41)                                  # Размытие по Гауссу для изображения
+    template_blur=cv2.GaussianBlur(template, (5, 5), 41)                            # Размытие по Гауссу для шаблона
     
-    Gy = np.array([[-1, -2, -1],
-                   [0, 0, 0],
-                   [1, 2, 1]])
+    magnitude_im=Sobel(image_blur)                                                  # Применение ядра Собеля к изображению
+    magnitude_te=Sobel(template_blur)                                               # Применение ядра Собеля к шаблону
     
-    h, w = image.shape
+    rectangles=template_search(magnitude_im, magnitude_te)                          # Шаблонный поиск
     
-    M = np.zeros_like(image, dtype=np.float64)
-        
-    for i in range(1, h - 1):
-        for j in range(1, w - 1):
-            region = image[i-1:i+2, j-1:j+2]
-            gx = np.sum(region * Gx)
-            gy = np.sum(region * Gy)
-            M[i, j] = np.sqrt(gx**2 + gy**2)
-    M = (M / M.max()) * 255
-    M = M.astype(np.uint8)
-    return M
-
-
-"""
-____________________________________________________
-
-Конец раздела функций
-____________________________________________________
-
-"""
-
-# Ввод изображения и обьекта
-image_RGB = cv2.imread("image.jpg")
-image_RGB_copy=np.copy(image_RGB)
-template_RGB = cv2.imread("image1.jpg")
-
-image=cv2.cvtColor(image_RGB, cv2.COLOR_BGR2GRAY)
-template=cv2.cvtColor(template_RGB, cv2.COLOR_BGR2GRAY)
-
-# Предобработка изображения и шаблона соответсвенно (Гауссово размытие и ядро собеля)
-image = cv2.GaussianBlur(image, (5, 5), 41)
-Magnitude_im = sobel(image)
-
-template = cv2.GaussianBlur(template, (5, 5), 41)
-Magnitude_te = sobel(template)
-
-# Цикл изменения масштаба изображения.
-template_copy=np.copy(template)
-all_rectangles = []
-
-for i in range (0, len(template)*2//3, 1):
-
-    # Именение масштаба изображения
-    new_size = (len(template[0])-i, len(template)-i) 
-    Magnitude_te = cv2.resize(Magnitude_te, new_size, interpolation=cv2.INTER_AREA)
-    template_copy = cv2.resize(template_copy, new_size, interpolation=cv2.INTER_AREA)
-
-    # Шаблонный поиск
-    rectangles, count_template_search=template_search(Magnitude_im, Magnitude_te)
-    all_rectangles.extend(rectangles)
-    image_rec_t = drawing_rec(image_RGB_copy, rectangles)
-    cv2.imwrite('t.jpg', image_rec_t)
-
-    # Создание LBP гистограммы для шаблона
-    LBP_img=LBP_Matrix(template_copy)
-    ghist1=LBP_Ghist_normalization(LBP_Ghist(LBP_img))
-
-    # Удаление лишних прямоугольников
-    all_rectangles = merge_duplicate_rectangles(all_rectangles)
-
-    # Проверка с помощью метода LBP 
-    rectangles_new=[]
-    for rectangle in all_rectangles: 
-        check = cheking(image, rectangle, ghist1)
-        if check is True:
-            rectangles_new.append(rectangle)
-
-image_rec_final = drawing_rec(image_RGB, rectangles_new)
-plt.figure(figsize=(10, 8))
-plt.imshow(cv2.cvtColor(image_rec_final, cv2.COLOR_BGR2RGB))  # Конвертируем BGR в RGB
-plt.title('Final_Check')
-plt.axis('off')
-plt.show()
-#cv2.imwrite('Final_Check.jpg', image_rec_final)
-print("Финальное количество уникальных объектов:", len(rectangles_new))
+    rectangles=NMS(rectangles)                                                      # Подавление немаксимумов
+    
+    lbp_template=LBP(template_blur)                                                 # Матрица LBP для шаблона
+    hist_template=LBP_hist(lbp_template)                                            # Гистограмма LBP для
+    
+    valid_rectangles=[]                                                             
+    for rect in rectangles:                                                         # Перебор регионов
+        x, y, w, h=map(int, rect)                                                   
+        Reg=image_blur[y:y+h, x:x+w]
+        if Reg.size > 0:
+            lbp_Reg=LBP(Reg)                                                        # Получение LBP картинки региона
+            hist_Reg=LBP_hist(lbp_Reg)                                              # Получение LBP гистограммы региона
+            chi2=np.sum((hist_Reg-hist_template)**2/(hist_Reg+hist_template+1e-10)) # Вычисляем хи квадрат
+            if chi2<0.3:                                                            
+                valid_rectangles.append(rect)
+                cv2.rectangle(image_bgr, (rect[0], rect[1]), 
+                              (rect[0]+rect[2], rect[1]+rect[3]), (0, 255, 0), 2)   # Рисуем результат
+    return len(valid_rectangles), image_bgr                                         # Возвращаем длинну массива удовлетворяющих областей
