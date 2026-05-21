@@ -13,3 +13,5 @@ for i in range (8000):
         except FileNotFoundError:
             continue
         continue
+    if image is None:
+        os.remove(f"annotations/{i}.txt")

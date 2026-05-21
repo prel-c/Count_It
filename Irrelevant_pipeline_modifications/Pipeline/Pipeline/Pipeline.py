@@ -88,7 +88,7 @@ def chi_square(hist1, hist2, epsilon=1e-10):
 
     """
     chi_square=np.sum((hist1 - hist2) ** 2 / (hist1 + hist2 + epsilon))
-    if chi_square < 0.4:
+    if chi_square < 0.2:
         return True
     else:
         return False
@@ -257,9 +257,9 @@ ____________________________________________________
 """
 
 # Ввод изображения и обьекта
-image_RGB = cv2.imread("image.jpg")
+image_RGB = cv2.imread("image.png")
 image_RGB_copy=np.copy(image_RGB)
-template_RGB = cv2.imread("image1.jpg")
+template_RGB = cv2.imread("image1.png")
 
 image=cv2.cvtColor(image_RGB, cv2.COLOR_BGR2GRAY)
 template=cv2.cvtColor(template_RGB, cv2.COLOR_BGR2GRAY)
