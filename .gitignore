@@ -1,0 +1,16 @@
+data_cache/
+loca/images/
+loca/models/loca_few_shot.pt
+loca/models/loca_zero_shot.pt
+loca/train_few_shot.sh
+loca/train_zero_shot.sh
+loca/utils/__pycache__/
+loca/models/__pycache__/
+FamNet/data/**
+!FamNet/data/**/
+!FamNet/data/**/.gitkeep
+FamNet/images/
+FamNet/logsSave/
+FamNet/__pycache__/
+FamNet/.vscode/
+.vscode
