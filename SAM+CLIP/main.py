@@ -10,7 +10,7 @@ if __name__ == "__main__":
     point = get_click_point(img)
     print("Выбрана точка:", point)
 
-    print("Извлечение эталона....")
+    print("Извлечение эталона...")
     ref_feat, ref_img, ref_mask, ref_point = get_reference(img, point)
 
     plt.figure()
