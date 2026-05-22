@@ -111,26 +111,6 @@ def MincountLoss(output, boxes, use_gpu=True):
         Loss += F.mse_loss(X, ones)
             
     return Loss
-    """if boxes.shape[1] > 1:
-        boxes = boxes.squeeze()
-        for tempBoxes in boxes.squeeze():
-            y1 = int(tempBoxes[1])
-            y2 = int(tempBoxes[3])
-            x1 = int(tempBoxes[2])
-            x2 = int(tempBoxes[4])
-            X = output[:,:,y1:y2,x1:x2].sum()
-            if X <= 1:
-                Loss += F.mse_loss(X,ones)
-    else:
-        boxes = boxes.squeeze()
-        y1 = int(boxes[1])
-        y2 = int(boxes[3])
-        x1 = int(boxes[2])
-        x2 = int(boxes[4])
-        X = output[:,:,y1:y2,x1:x2].sum()
-        if X <= 1:
-            Loss += F.mse_loss(X,ones)  
-    return Loss"""
 
 def pad_to_size(feat, desire_h, desire_w):
     """Добавляет нулевые отступы (padding) к тензору признаков (N, C, H, W)"""

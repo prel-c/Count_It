@@ -107,8 +107,6 @@ def FamNetMain(image, get_box, model_path="FamNet/data/pretrainedModels/FamNet_S
     print(f'\n=================================')
     print(f'ПРЕДСКАЗАННОЕ КОЛИЧЕСТВО: {pred_cnt:.2f}')
     print(f'=================================\n')
-
-    img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
     # Извлекаем карту плотности в виде 2D numpy массива
     density_map = output[0, 0].detach().cpu().numpy()
@@ -118,7 +116,7 @@ def FamNetMain(image, get_box, model_path="FamNet/data/pretrainedModels/FamNet_S
 
     # Левая половина: исходная картинка + рамки
     plt.subplot(1, 2, 1)
-    plt.imshow(img_rgb)
+    plt.imshow(image)
     for box in rects_xy:
         # box: [x1, y1, x2, y2]. Для Rectangle нужны: (x1, y1), ширина, высота
         plt.gca().add_patch(plt.Rectangle(
