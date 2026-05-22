@@ -129,7 +129,6 @@ def FamNettest(adapt=False, otsu_seg=False, grabcut_seg=False, sam_seg=False, th
     pass
 
 
-
 if __name__ == "__main__":
 
     print("Введите путь к изображению или 0 чтобы использовать пример")

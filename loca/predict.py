@@ -3,14 +3,11 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 from torchvision import transforms
-from models.loca import build_model
+from loca.models.loca import build_model
 
-IMG_PATH = "FamNet/data/images_384_VarV2/5.jpg"
-MODEL_PATH = "Loca/models/loca_few_shot.pt"
-ZERO_SHOT = False 
 
-def run_prediction():
-    device = torch.device('cpu')
+def LocaMain(image, get_box, model_path="Loca/models/loca_few_shot.pt", zero=False):
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     class Args:
         backbone = 'resnet50'
@@ -24,32 +21,21 @@ def run_prediction():
         kernel_dim = 3
         num_objects = 3
         pre_norm = True
-        zero_shot = ZERO_SHOT
+        zero_shot = zero
         backbone_lr = 0.0
         dropout = 0.1
         tiling_p = 0.0
 
     model = build_model(Args).to(device)
-    state_dict = torch.load(MODEL_PATH, map_location=device)['model']
+    state_dict = torch.load(model_path, map_location=device)['model']
     state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
     model.load_state_dict(state_dict)
     model.eval()
 
-    img_bgr = cv2.imread(IMG_PATH)
-    if img_bgr is None:
-        print(f"Ошибка: не удалось загрузить фото {IMG_PATH}")
-        return
+    my_bboxes = get_box(image, 3)
 
-    my_bboxes = []
-    for i in range(3):
-        roi = cv2.selectROI(f"Select Object {i+1}", img_bgr, fromCenter=False, showCrosshair=True)
-        x, y, w, h = roi
-        # Преобразуем формат OpenCV [x, y, w, h] в формат LOCA [x1, y1, x2, y2]
-        my_bboxes.append([x, y, x + w, y + h])
-        cv2.destroyWindow(f"Select Object {i+1}")
-
-    h_orig, w_orig, _ = img_bgr.shape
-    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
+    h_orig, w_orig, _ = image.shape
+    img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
     transform = transforms.Compose([
         transforms.ToPILImage(),
@@ -72,20 +58,39 @@ def run_prediction():
 
     h, w = img_rgb.shape[:2]
     density_map = output[0].squeeze().cpu().numpy()
+
+
+    # Визуализация в одном окне через Matplotlib
+    # Переводим исходную картинку в RGB для корректных цветов в plt
+    img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+
+    # Создаем общее окно
     plt.figure(figsize=(12, 6))
+
+    # Левая половина: исходная картинка + рамки
     plt.subplot(1, 2, 1)
     plt.imshow(img_rgb)
     for box in my_bboxes:
-        plt.gca().add_patch(plt.Rectangle((box[0], box[1]), box[2]-box[0], box[3]-box[1], 
-                                          edgecolor='red', facecolor='none', lw=2))
-    plt.title("")
+        # box: [x1, y1, x2, y2]. Для Rectangle нужны: (x1, y1), ширина, высота
+        plt.gca().add_patch(plt.Rectangle(
+            (box[0], box[1]), 
+            box[2] - box[0], 
+            box[3] - box[1], 
+            edgecolor='red', 
+            facecolor='none', 
+            lw=2
+        ))
+    plt.title("Исходное изображение (Примеры)")
     plt.axis('off')
+
+    # Правая половина: Карта плотности с результатом в заголовке
     plt.subplot(1, 2, 2)
-    plt.imshow(density_map, cmap='jet', extent=[0, w, h, 0])
-    plt.title(f"Результат {count:.2f})")
+    # extent=[0, w_orig, h_orig, 0] автоматически растянет/сожмет карту плотности под размеры оригинала
+    plt.imshow(density_map, cmap='jet', extent=[0, w_orig, h_orig, 0])
+    plt.title(f"Результат: {count:.2f}")
+    
     plt.colorbar(fraction=0.046, pad=0.04)
     plt.axis('off')
+    
+    print("Окно визуализации открыто. Закройте окно Matplotlib, чтобы завершить программу.")
     plt.show()
-
-if __name__ == "__main__":
-    run_prediction()

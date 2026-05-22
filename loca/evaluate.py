@@ -13,19 +13,13 @@ from torch import distributed as dist
 
 @torch.no_grad()
 def evaluate(args):
-    # 1. Жестко задаем CPU
     device = torch.device('cpu')
     print("Запуск инференса на CPU...")
 
-    # 2. Создаем модель (БЕЗ DistributedDataParallel)
     model = build_model(args).to(device)
 
-    # 3. Загружаем веса. Важно: map_location=device, чтобы веса с GPU грузились в оперативную память.
     model_file = os.path.join(args.model_path, f'{args.model_name}.pt')
-    state_dict = torch.load(model_file, map_location=device)['model']
-    
-    # Модель была сохранена в режиме DDP (с префиксом 'module.'), 
-    # а наша обычная модель этого префикса не ждет. Убираем его:
+
     state_dict = {k.replace('module.', ''): v for k, v in state_dict.items()}
     model.load_state_dict(state_dict)
 
@@ -50,7 +44,6 @@ def evaluate(args):
             if step >= 100:
                 print(f"Достигнут лимит в 100 батчей. Завершаем проверку {split}...")
                 break
-            # Небольшой вывод прогресса, чтобы было видно, что процесс идет
             if step % 5 == 0:
                 print(f"Обработка {split}: батч {step}/{len(test_loader)}")
             img = img.to(device)
