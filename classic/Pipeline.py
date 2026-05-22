@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
-
-def test(image_BGR, template_box):
+import matplotlib.pyplot as plt
+def ClassicMain(image_rgb, get_box):
     """
     Ввод - BGR изображение, бокс шаблона
     Вывод - Количество найденных объектов и изображение с нарисованными боксами вокруг найденных объектов
@@ -165,12 +165,16 @@ def test(image_BGR, template_box):
     """
     Пайплайн обработки
     """
-    image=cv2.cvtColor(image_BGR, cv2.COLOR_BGR2GRAY)
-    image_bgr=image_BGR.copy()
-    x1, y1, x2, y2=template_box[0][0], template_box[0][1], template_box[1][0], template_box[1][1]
-    template=image[y2:y1, x2:x1]
+    
+    image=cv2.cvtColor(image_rgb, cv2.COLOR_RGB2GRAY)
+    image_bgr = cv2.cvtColor(image_rgb, cv2.COLOR_RGB2BGR)
 
-    image_blur=cv2.GaussianBlur(image, (5, 5), 41)                                  # Размытие по Гауссу для изображения
+    template_box = get_box(image_rgb, num_box=1)
+
+    x1, y1, x2, y2 = template_box[0][0], template_box[0][1], template_box[0][2], template_box[0][3]
+    template=image[y1:y2, x1:x2]
+
+    image_blur=cv2.GaussianBlur(image, (5, 5), 4)                                   # Размытие по Гауссу для изображения
     template_blur=cv2.GaussianBlur(template, (5, 5), 41)                            # Размытие по Гауссу для шаблона
     
     magnitude_im=Sobel(image_blur)                                                  # Применение ядра Собеля к изображению
@@ -193,6 +197,20 @@ def test(image_BGR, template_box):
             chi2=np.sum((hist_Reg-hist_template)**2/(hist_Reg+hist_template+1e-10)) # Вычисляем хи квадрат
             if chi2<0.3:                                                            
                 valid_rectangles.append(rect)
-                cv2.rectangle(image_bgr, (rect[0], rect[1]), 
+                cv2.rectangle(image_rgb, (rect[0], rect[1]), 
                               (rect[0]+rect[2], rect[1]+rect[3]), (0, 255, 0), 2)   # Рисуем результат
-    return len(valid_rectangles), image_bgr                                         # Возвращаем длинну массива удовлетворяющих областей
+    output = len(valid_rectangles)
+
+    print(f'\n=================================')
+    print(f'ПРЕДСКАЗАННОЕ КОЛИЧЕСТВО: {output}')
+    print(f'=================================\n')
+
+    plt.figure(figsize=(8, 8))
+
+    plt.imshow(image_rgb)
+        
+    plt.title(f"Результат: {output} шт.")
+    plt.axis('off')
+    
+    plt.show()
+    return output, image                                             # Возвращаем длинну массива удовлетворяющих областей
