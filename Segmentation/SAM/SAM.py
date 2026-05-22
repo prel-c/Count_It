@@ -11,7 +11,6 @@ def sam_test(image, h, w):
     checkpoint = "Segmentation/SAM/data/sam_vit_b_01ec64.pth"
     model_type = "vit_b"
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    #print(device)
 
     sam_model = sam_model_registry[model_type](checkpoint=checkpoint)
     sam_model.to(device)
@@ -26,8 +25,8 @@ def sam_test(image, h, w):
 
     height, width, _ = image.shape
 
-    MIN_AREA = int(0.01 * w * h)    # Отсекаем мелкий шум (блики, пылинки)
-    MAX_AREA = int(0.2 * width * height)   # Отсекаем фон (стены, пол, огромные тени)
+    MIN_AREA = int(0.01 * w * h)    
+    MAX_AREA = int(0.2 * width * height)  
 
     if device.type == "cuda":
         with torch.inference_mode(), torch.autocast(device_type=device.type, dtype=torch.float16):
@@ -47,26 +46,22 @@ def sam_test(image, h, w):
             filtered_count += 1
 
     padding = int((w + h) // 2 * 0.1) 
-    if padding < 1: padding = 1 # Чтобы не было нулевого ядра
+    if padding < 1: padding = 1
     if padding % 2 == 0: padding += 1
     
     mask_4d = combined_mask.float().unsqueeze(0).unsqueeze(0)
     dilated_mask = F.max_pool2d(mask_4d, kernel_size=padding, stride=1, padding=padding // 2)
-    
-    # Возвращаем маску обратно в 2D и логический тип
+
     combined_mask = dilated_mask.squeeze(0).squeeze(0) > 0
 
-    # Переносим само исходное изображение на видеокарту
     image_tensor = torch.from_numpy(image).to(device)
 
-    # Считаем средний цвет картинки прямо на GPU
+
     mean_color = image_tensor.float().mean(dim=(0, 1)).to(torch.uint8)
 
-    # Заменяем фон через torch.where (быстрее, чем маскирование в numpy)
-    # unsqueeze(-1) превращает маску (H, W) в (H, W, 1) для бродкастинга по 3 каналам цвета
+
     clean_image_tensor = torch.where(combined_mask.unsqueeze(-1), image_tensor, 0)
 
-    # Возвращаем результат на CPU в виде numpy-массива для дальнейшего сохранения/вывода
     return clean_image_tensor.cpu().numpy()
 
 
