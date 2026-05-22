@@ -1,6 +1,11 @@
 import torch.nn as nn
+<<<<<<< HEAD
 from model import  Resnet50FPN, CountRegressor, weights_normal_init
 from utils import MAPS, Scales, Transform, TransformTrain, extract_features, visualize_output_and_save
+=======
+from FamNet.model import  Resnet50FPN,CountRegressor,weights_normal_init
+from utils import MAPS, Scales, Transform,TransformTrain,extract_features, visualize_output_and_save
+>>>>>>> 3a38548724aafc5d3cd9fbecb4924d7208624e3f
 from PIL import Image
 import os
 import torch

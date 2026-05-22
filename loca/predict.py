@@ -79,12 +79,10 @@ def run_prediction():
         plt.gca().add_patch(plt.Rectangle((box[0], box[1]), box[2]-box[0], box[3]-box[1], 
                                           edgecolor='red', facecolor='none', lw=2))
     plt.title("")
-
     plt.axis('off')
     plt.subplot(1, 2, 2)
     plt.imshow(density_map, cmap='jet', extent=[0, w, h, 0])
     plt.title(f"Результат {count:.2f})")
-
     plt.colorbar(fraction=0.046, pad=0.04)
     plt.axis('off')
     plt.show()
