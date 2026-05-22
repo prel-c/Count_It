@@ -27,7 +27,7 @@ class Resnet50FPN(nn.Module):
 
 
 class CountRegressor(nn.Module):
-    def __init__(self, input_channels,pool='mean'):
+    def __init__(self, input_channels, pool='mean'):
         super(CountRegressor, self).__init__()
         self.pool = pool
         self.regressor = nn.Sequential(

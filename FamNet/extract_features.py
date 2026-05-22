@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from model import  Resnet50FPN
 from utils import MAPS, Scales, extract_features, \
-extract_segmentation_map, show_segmentation_result, show_pca_features, \
+extract_segmentation_map, show_pca_features, \
 show_top_channels, show_max_activation
 from PIL import Image
 from torchvision import transforms
@@ -41,7 +41,7 @@ resnet50_conv = Resnet50FPN()
 resnet50_conv.to(device)
 resnet50_conv.eval()
 
-image = Image.open("./data/images_384_VarV2/200.jpg").convert('RGB')
+image = Image.open("D:/mygit/opd/image.png").convert('RGB')
 image.load()
 
 image = prepare_sample(image)
@@ -50,8 +50,8 @@ image = prepare_sample(image)
 Image_features = resnet50_conv(image)
 feat_map = Image_features['map1'] # можно выбирать и map2, map3, map4
 
-result = show_pca_features(feat_map)
-#result = show_top_channels(feat_map, num_channels=3, upscale_factor=2)
+#result = show_pca_features(feat_map)
+result = show_top_channels(feat_map, num_channels=30, upscale_factor=1)
 #esult = show_max_activation(feat_map)
 
 cv2.imshow("Результат",result)

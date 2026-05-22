@@ -53,9 +53,9 @@ def visualize_yolo_annotations(image_path, txt_path, save_path=None):
     plt.title(f"Найдено объектов: {len(lines)}")
     plt.show()
 
-data_folder = "ResNet/data" 
-img_file = os.path.join(data_folder, "images_384_VarV2", "350.jpg")
-txt_file = os.path.join(data_folder, "yolo_labels", "350.txt")
+data_folder = "FamNet/data" 
+img_file = os.path.join(data_folder, "images_384_VarV2", "1050.jpg")
+txt_file = os.path.join(data_folder, "yolo_labels", "1050.txt")
 
 visualize_yolo_annotations(
     image_path=img_file, 
