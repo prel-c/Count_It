@@ -4,27 +4,13 @@ project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, project_root)
 import warnings
 warnings.filterwarnings("ignore")
-import gc
-import copy
-from PIL import Image
 import cv2
-import json
-import torch
-import torch.optim as optim
-import torchvision.transforms as T
-from tqdm import tqdm
-import pandas as pd
-import numpy as np
-import matplotlib.pyplot as plt
-from colorama import Fore, Style
-from easydict import EasyDict
 
-#from YOLO.yolopipe import *
 
 def get_box(image, num_box=None):
-    """Функция ручной разметки боксов с поддержкой Drag-and-Drop и Backspace"""
-    image_original = image.copy()
-    image_working = image.copy()
+    """Функция ручной разметки боксов"""
+    image_original = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+    image_working = image_original.copy()
     
     template_coords = []  # Список для хранения [x1, y1, x2, y2]
     drawing = False        # Флаг процесса рисования
@@ -49,7 +35,6 @@ def get_box(image, num_box=None):
                 
         elif event == cv2.EVENT_LBUTTONUP:
             drawing = False
-            # Защита от обратного рисования (справа-налево или снизу-вверх)
             x1, x2 = min(ix, x), max(ix, x)
             y1, y2 = min(iy, y), max(iy, y)
             
@@ -66,7 +51,6 @@ def get_box(image, num_box=None):
             cv2.rectangle(image_working, (rect[0], rect[1]), (rect[2], rect[3]), (0, 255, 0), 2)
         cv2.imshow("Selecting templates", image_working)
 
-    # Основной блок выполнения разметки
     cv2.imshow("Selecting templates", image_working)
     cv2.setMouseCallback("Selecting templates", draw_rectangle)
     
@@ -101,32 +85,41 @@ def get_box(image, num_box=None):
     print(f"\nИтого выделено примеров: {n}")
     return template_coords
 
-def FamNetTest(adapt=False, otsu_seg=False, grabcut_seg=False, sam_seg=False, th=False, image_path=None, box=None):
+def FamNetTest(image):
     if 'FamNet.test' not in sys.modules:
         from FamNet.test import FamNetMain
 
     FamNetMain(image, get_box)
 
-def LocaTest(adapt=False, otsu_seg=False, grabcut_seg=False, sam_seg=False, th=False, image_path=None, box=None):
+def LocaTest(image):
     if 'loca.predict' not in sys.modules:
         from loca.predict import LocaMain
 
     LocaMain(image, get_box)
 
-def SamClipTest(adapt=False, otsu_seg=False, grabcut_seg=False, sam_seg=False, th=False, image_path=None, box=None):
-    print(123)
+def Sam_ClipTest(image):
+    if 'SAM+CLIP.main' not in sys.modules:
+        from SAM_CLIP.main import SAM_CLIPMain
 
-def SAFECountTest(adapt=False, otsu_seg=False, grabcut_seg=False, sam_seg=False, th=False, image_path=None, box=None):
+    SAM_CLIPMain(image)
+
+def SAFECountTest(image):
     if 'SAFECount.tools.test' not in sys.modules:
         from SAFECount.tools.test import SAFECountMain
 
     SAFECountMain(image, get_box)
 
-def FamNettest(adapt=False, otsu_seg=False, grabcut_seg=False, sam_seg=False, th=False, image_path=None, box=None):
-    pass
+def YOLOTest(image):
+    if 'YOLO.test' not in sys.modules:
+        from YOLO.test import YOLOMain
 
-def FamNettest(adapt=False, otsu_seg=False, grabcut_seg=False, sam_seg=False, th=False, image_path=None, box=None):
-    pass
+    YOLOMain(image)
+
+def ClassicTest(image):
+    if 'classic.Pipeline' not in sys.modules:
+        from classic.Pipeline import ClassicMain
+
+    ClassicMain(image, get_box)
 
 
 if __name__ == "__main__":
@@ -135,13 +128,13 @@ if __name__ == "__main__":
     image_path = input()
     if image_path == "0":
         print("Выбран пример")
-        image_path = "assets/5.jpg"
+        image_path = "assets/2743.jpg"
 
-    image = cv2.imread(image_path)
+    image = cv2.cvtColor(cv2.imread(image_path), cv2.COLOR_BGR2RGB)
     if image is None:
         raise ValueError("Не удалось считать изображение")
 
-    models = {'1': FamNetTest, '2':LocaTest, '6': SAFECountTest}
+    models = {'1': FamNetTest, '2':LocaTest, '3':Sam_ClipTest, '4': YOLOTest, '5': ClassicTest, '6': SAFECountTest}
     print("Доступные pipeline:")
     for k, v in models.items():
         print(f'Введите {k} для запуска {v.__name__}')

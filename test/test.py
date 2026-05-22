@@ -26,9 +26,6 @@ from Segmentation.GrabCutSegmentation import grabcut
 from Segmentation.NoiseSubpression import no_noise
 from Segmentation.SAM.SAM import sam_test
 
-#если у вас не установленны какие-то библиотеки, то запустите
-#pip install opencv-python torch tqdm pandas numpy matplotlib colorama pillow
-
 class LocaArgs:
     backbone = 'resnet50'
     swav_backbone = True
