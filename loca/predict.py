@@ -35,7 +35,6 @@ def LocaMain(image, get_box, model_path="Loca/models/loca_few_shot.pt", zero=Fal
     my_bboxes = get_box(image, 3)
 
     h_orig, w_orig, _ = image.shape
-    img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     
     transform = transforms.Compose([
         transforms.ToPILImage(),
@@ -43,7 +42,7 @@ def LocaMain(image, get_box, model_path="Loca/models/loca_few_shot.pt", zero=Fal
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
     ])
-    img_tensor = transform(img_rgb).unsqueeze(0).to(device)
+    img_tensor = transform(image).unsqueeze(0).to(device)
 
     bboxes = torch.tensor(my_bboxes).float()
     bboxes[:, [0, 2]] *= (512.0 / w_orig)
@@ -54,22 +53,23 @@ def LocaMain(image, get_box, model_path="Loca/models/loca_few_shot.pt", zero=Fal
         output, _ = model(img_tensor, bboxes)
     
     count = output.sum().item()
-    print(f"Итоговое количество: {count:.2f}")
+    print(f"\n=================================")
+    print(f"ПРЕДСКАЗАННОЕ КОЛИЧЕСТВО: {count:.2f}")
+    print(f"=================================\n")
 
-    h, w = img_rgb.shape[:2]
+    h, w = image.shape[:2]
     density_map = output[0].squeeze().cpu().numpy()
 
 
     # Визуализация в одном окне через Matplotlib
     # Переводим исходную картинку в RGB для корректных цветов в plt
-    img_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
     # Создаем общее окно
     plt.figure(figsize=(12, 6))
 
     # Левая половина: исходная картинка + рамки
     plt.subplot(1, 2, 1)
-    plt.imshow(img_rgb)
+    plt.imshow(image)
     for box in my_bboxes:
         # box: [x1, y1, x2, y2]. Для Rectangle нужны: (x1, y1), ширина, высота
         plt.gca().add_patch(plt.Rectangle(
