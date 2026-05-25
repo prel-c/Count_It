@@ -1,7 +1,11 @@
 import cv2
 import numpy as np
 
-def classic(image):   
+def classic(image_BGR, template):
+    """
+    Ввод - BGR изображение, бокс шаблона
+    Вывод - Количество найденных объектов и изображение с нарисованными боксами вокруг найденных объектов
+    """
     def LBP(img):
 
         """
@@ -161,12 +165,14 @@ def classic(image):
     """
     Пайплайн обработки
     """
+    image=cv2.cvtColor(image_BGR, cv2.COLOR_BGR2GRAY)
+    template=cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+    image_bgr=image_BGR.copy()
+
+
     image_blur=cv2.GaussianBlur(image, (5, 5), 41)                                  # Размытие по Гауссу для изображения
     template_blur=cv2.GaussianBlur(template, (5, 5), 41)                            # Размытие по Гауссу для шаблона
     
-    #image_blur=image.copy()
-    #template_blur=template.copy()
-
     magnitude_im=Sobel(image_blur)                                                  # Применение ядра Собеля к изображению
     magnitude_te=Sobel(template_blur)                                               # Применение ядра Собеля к шаблону
     
@@ -187,6 +193,6 @@ def classic(image):
             chi2=np.sum((hist_Reg-hist_template)**2/(hist_Reg+hist_template+1e-10)) # Вычисляем хи квадрат
             if chi2<0.3:                                                            
                 valid_rectangles.append(rect)
-                cv2.rectangle(image1, (rect[0], rect[1]), 
+                cv2.rectangle(image_bgr, (rect[0], rect[1]), 
                               (rect[0]+rect[2], rect[1]+rect[3]), (0, 255, 0), 2)   # Рисуем результат
-    return len(valid_rectangles), image1                                            # Возвращаем длинну массива удовлетворяющих областей
+    return len(valid_rectangles), image_bgr                                         # Возвращаем длинну массива удовлетворяющих областей
