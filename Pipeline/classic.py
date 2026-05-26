@@ -191,7 +191,7 @@ def classic(image_BGR, template):
             lbp_Reg=LBP(Reg)                                                        # Получение LBP картинки региона
             hist_Reg=LBP_hist(lbp_Reg)                                              # Получение LBP гистограммы региона
             chi2=np.sum((hist_Reg-hist_template)**2/(hist_Reg+hist_template+1e-10)) # Вычисляем хи квадрат
-            if chi2<0.3:                                                            
+            if chi2<0.3:
                 valid_rectangles.append(rect)
                 cv2.rectangle(image_bgr, (rect[0], rect[1]), 
                               (rect[0]+rect[2], rect[1]+rect[3]), (0, 255, 0), 2)   # Рисуем результат
